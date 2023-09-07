@@ -96,6 +96,18 @@ class Gui(QMainWindow):
         self.ui.btnUser4.setText('Execute')
         self.ui.btnUser4.clicked.connect(partial(nxt_if_arm_init, 'execute'))
 
+        self.ui.btnUser5.setText('Record Waypoint - Open')
+        self.ui.btnUser5.clicked.connect(partial(nxt_if_arm_init, 'record_open'))
+
+        self.ui.btnUser6.setText('Record Waypoint - Closed')
+        self.ui.btnUser6.clicked.connect(partial(nxt_if_arm_init, 'record_closed'))
+
+        self.ui.btnUser7.setText('Execute Recorded')
+        self.ui.btnUser7.clicked.connect(partial(nxt_if_arm_init, 'execute_record'))
+        
+        self.ui.btnUser8.setText('Clear Waypoints')
+        self.ui.btnUser8.clicked.connect(partial(nxt_if_arm_init, 'clear'))
+
         # Sliders
         for sldr in self.joint_sliders:
             sldr.valueChanged.connect(self.sliderChange)

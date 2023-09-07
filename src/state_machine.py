@@ -6,6 +6,7 @@ import time
 import numpy as np
 import rclpy
 
+
 class StateMachine():
     """!
     @brief      This class describes a state machine.
@@ -27,16 +28,18 @@ class StateMachine():
         self.current_state = "idle"
         self.next_state = "idle"
         self.waypoints = [
-            [-np.pi/2,       -0.5,      -0.3,            0.0,       0.0],
-            [0.75*-np.pi/2,   0.5,      0.3,      0.0,       np.pi/2],
-            [0.5*-np.pi/2,   -0.5,     -0.3,     np.pi / 2,     0.0],
-            [0.25*-np.pi/2,   0.5,     0.3,     0.0,       np.pi/2],
-            [0.0,             0.0,      0.0,         0.0,     0.0],
-            [0.25*np.pi/2,   -0.5,      -0.3,      0.0,       np.pi/2],
-            [0.5*np.pi/2,     0.5,     0.3,     np.pi / 2,     0.0],
-            [0.75*np.pi/2,   -0.5,     -0.3,     0.0,       np.pi/2],
-            [np.pi/2,         0.5,     0.3,      0.0,     0.0],
-            [0.0,             0.0,     0.0,      0.0,     0.0]]
+            [-np.pi/2, -0.5, -0.3, 0.0, 0.0],
+            [0.75*-np.pi/2, 0.5, 0.3, -np.pi/3, np.pi/2],
+            [0.5*-np.pi/2, -0.5, -0.3, np.pi / 2, 0.0],
+            [0.25*-np.pi/2, 0.5, 0.3, -np.pi/3, np.pi/2],
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.25*np.pi/2, -0.5, -0.3, 0.0, np.pi/2],
+            [0.5*np.pi/2, 0.5, 0.3, -np.pi/3, 0.0],
+            [0.75*np.pi/2, -0.5, -0.3, 0.0, np.pi/2],
+            [np.pi/2, 0.5, 0.3, -np.pi/3, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0]]
+        
+        self.recorded_waypoints = []
 
     def set_next_state(self, state):
         """!
@@ -76,6 +79,18 @@ class StateMachine():
 
         if self.next_state == "manual":
             self.manual()
+        
+        if self.next_state == 'record_open':
+            self.record_open()
+
+        if self.next_state == 'record_closed':
+            self.record_closed()
+        
+        if self.next_state == 'execute_record':
+            self.execute_record()
+        
+        if self.next_state == 'clear':
+            self.clear()
 
 
     """Functions run for each state"""
@@ -109,7 +124,11 @@ class StateMachine():
               Make sure you respect estop signal
         """
         self.status_message = "State: Execute - Executing motion plan"
+        self.current_state = "execute"
         self.next_state = "idle"
+        for points in self.waypoints:
+            self.rxarm.set_positions(points)
+            time.sleep(2)
 
     def calibrate(self):
         """!
@@ -120,6 +139,76 @@ class StateMachine():
 
         """TODO Perform camera calibration routine here"""
         self.status_message = "Calibration - Completed Calibration"
+
+
+    def record_open(self):
+        self.status_message = "State: Record Waypoints - Recording waypoints"
+        self.current_state = "record"
+        self.next_state = "idle"
+        # pos = [-np.pi/2, -0.5, -0.3, 0.0, 0.0]
+        # self.rxarm.set_positions(pos)
+        self.recorded_waypoints.append([self.rxarm.get_positions().tolist(), 1])
+
+    def record_closed(self):
+        self.status_message = "State: Record Waypoints - Recording waypoints"
+        self.current_state = "record"
+        self.next_state = "idle"
+        # pos = [-np.pi/2, -0.5, -0.3, 0.0, 0.0]
+        # self.rxarm.set_positions(pos)
+        self.recorded_waypoints.append([self.rxarm.get_positions().tolist(), 0])
+
+    def clear(self):
+        self.recorded_waypoints = []
+    
+    # Helper function
+    def find_delta_points(self, prev_pt, curr_pt):
+        delta_pt = []
+        max_delta_angle = -1
+        max_angle_ind = 0
+        for i in range(len(prev_pt)):
+            delta_angle = abs(curr_pt[i] - prev_pt[i])
+            delta_pt.append(delta_angle)
+            if max_delta_angle < delta_angle:
+                max_delta_angle = delta_angle
+                max_angle_ind = i
+        return delta_pt, max_delta_angle, max_angle_ind
+
+    def execute_record(self):
+        """!
+        @brief      Go through all the recorded waypoints
+        """
+        self.status_message = "State: Execute Recorded - Executing motion plan of the recorded waypoints"
+        self.current_state = "execute_record"
+        self.next_state = "idle"
+        prev_point = self.rxarm.get_positions().tolist()
+        delta_point = []
+        max_speed = np.pi/2 #rad/seconds
+        print(self.recorded_waypoints)
+        
+
+        for point in self.recorded_waypoints:
+            delta_pt, max_delta_angle, max_angle_ind = self.find_delta_points(prev_point,point[0])
+            time_max_speed = max_delta_angle - 0.2*np.pi
+            if time_max_speed < 0:
+                time_max_speed = 0
+            moving_time = time_max_speed/max_speed + 0.8 
+            
+            accel_time = 0.4
+            self.rxarm.set_moving_time(moving_time)
+            self.rxarm.set_accel_time(accel_time)
+
+            self.rxarm.set_positions(point[0])
+            time.sleep(moving_time + 0.1)
+            if point[1] == 0:
+                self.rxarm.gripper.grasp()
+                time.sleep(0.5)
+            elif point[1] == 1:
+                self.rxarm.gripper.release()
+                time.sleep(0.5)
+            prev_point = point[0]
+
+
+
 
     """ TODO """
     def detect(self):
@@ -139,6 +228,7 @@ class StateMachine():
             self.status_message = "State: Failed to initialize the rxarm!"
             time.sleep(5)
         self.next_state = "idle"
+
 
 class StateMachineThread(QThread):
     """!
