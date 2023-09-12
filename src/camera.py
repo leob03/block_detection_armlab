@@ -214,11 +214,9 @@ class Camera():
         for i in range(n):
             src_pts = np.append(src_pts, round(msg.detections[i].centre.x))
             src_pts = np.append(src_pts, round(msg.detections[i].centre.y))
-        print(src_pts)
         src_pts = src_pts.reshape(n,2)
         for pt in src_pts:
-            print(tuple(pt))
-            cv2.circle(modified_image, tuple(pt), 5, (0, 255, 0), -1)
+            cv2.circle(modified_image, [round(pt[0]),round(pt[1])], 5, (0, 255, 0), -1)
 
         self.TagImageFrame = modified_image
 
