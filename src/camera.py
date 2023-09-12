@@ -209,13 +209,22 @@ class Camera():
         """
         modified_image = self.VideoFrame.copy()
         
-        src_pts = np.array([])
+        center_pts = np.array([])
+        corner_pts = np.array([])
+
         n = len(msg.detections)
         for i in range(n):
-            src_pts = np.append(src_pts, round(msg.detections[i].centre.x))
-            src_pts = np.append(src_pts, round(msg.detections[i].centre.y))
-        src_pts = src_pts.reshape(n,2)
-        for pt in src_pts:
+            center_pts = np.append(center_pts, round(msg.detections[i].centre.x))
+            center_pts = np.append(center_pts, round(msg.detections[i].centre.y))
+            point1 = (round(msg.detections[i].corners[0].x), round(msg.detections[i].corners[0].y))
+            point2 = (round(msg.detections[i].corners[1].x), round(msg.detections[i].corners[1].y))
+            point3 = (round(msg.detections[i].corners[2].x), round(msg.detections[i].corners[2].y))
+            point4 = (round(msg.detections[i].corners[3].x), round(msg.detections[i].corners[3].y))
+            points = np.array([point1, point2, point3, point4], dtype=np.int32).reshape((-1, 1, 2))
+            cv2.polylines(modified_image, [points], 5,(0, 0, 255), 2)
+            cv2.putText(modified_image, 'ID: {}'.format(msg.detections[i].id), (round(msg.detections[i].corners[1].x)+20, round(msg.detections[i].corners[1].y)+20),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2)
+        center_pts = center_pts.reshape(n,2)
+        for pt in center_pts:
             cv2.circle(modified_image, [round(pt[0]),round(pt[1])], 5, (0, 255, 0), -1)
 
         self.TagImageFrame = modified_image
