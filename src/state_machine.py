@@ -5,7 +5,8 @@ from PyQt5.QtCore import QThread, Qt, pyqtSignal, pyqtSlot, QTimer
 import time
 import numpy as np
 import rclpy
-
+from tkinter import *
+import tkinter.messagebox
 
 class StateMachine():
     """!
@@ -22,6 +23,7 @@ class StateMachine():
         @param      planner  The planner
         @param      camera   The camera
         """
+
         self.rxarm = rxarm
         self.camera = camera
         self.status_message = "State: Idle"
@@ -148,17 +150,40 @@ class StateMachine():
         # pos = [-np.pi/2, -0.5, -0.3, 0.0, 0.0]
         # self.rxarm.set_positions(pos)
         self.recorded_waypoints.append([self.rxarm.get_positions().tolist(), 1])
+        print(f'This waypoint: {self.rxarm.get_positions().tolist()} \nUpdated list of waypoints: {self.recorded_waypoints}')
 
     def record_closed(self):
         self.status_message = "State: Record Waypoints - Recording waypoints"
         self.current_state = "record"
         self.next_state = "idle"
         # pos = [-np.pi/2, -0.5, -0.3, 0.0, 0.0]
-        # self.rxarm.set_positions(pos)
+        # self.rxarm.set_positions(pos
         self.recorded_waypoints.append([self.rxarm.get_positions().tolist(), 0])
+        print(f'This waypoint: {self.rxarm.get_positions().tolist()} \nUpdated list of waypoints: {self.recorded_waypoints}')
+
+    # def yesClear(self, root):
+    #     tkinter.messagebox.showinfo("Ok, clearing!")
+    #     self.recorded_waypoints = []
+    #     root.destroy()
+
+    # def noClear(self, root):
+    #     tkinter.messagebox.showinfo("Yep, sounds good, not clearing!")
+    #     root.destroy()
 
     def clear(self):
+        # root = tkinter.Tk()
+        # root.title("Double checker for the clear button so you don't" 
+        #            "accidently clear your precious waypoints")
+        # root.geometry('1000x300')
+        # ButtonYes = Button(root, text = "YES, I WANT TO CLEAR", command = self.yesClear(root), height = 5, width = 25)
+        # ButtonNo = Button(root, text = "NO, I DON'T WANT TO CLEAR!!!", command = self.noClear(root), height = 5, width = 25)
+        # ButtonYes.pack(side = 'right')
+        # ButtonNo.pack(side = 'left')
+        # root.mainloop()
+
         self.recorded_waypoints = []
+        print(f'Updated list of waypoints: {self.recorded_waypoints}')
+        self.next_state = "idle"
     
     # Helper function
     def find_delta_points(self, prev_pt, curr_pt):
