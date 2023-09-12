@@ -209,6 +209,7 @@ class Camera():
         """
         modified_image = self.VideoFrame.copy()
         # Write your code here
+
         
 
         self.TagImageFrame = modified_image
