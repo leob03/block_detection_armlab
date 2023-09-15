@@ -49,7 +49,7 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = [[-250, -25], [250, -25], [250, 275]]
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.0],[125.0,350.0,242.8]])
         """ block info """
         self.block_contours = np.array([])
         self.block_detections = np.array([])
