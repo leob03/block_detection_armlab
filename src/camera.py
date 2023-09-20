@@ -39,8 +39,8 @@ class Camera():
 
         # mouse clicks & calibration variables
         self.cameraCalibrated = False
-        self.intrinsic_matrix = np.eye(3)
-        self.extrinsic_matrix = np.eye(4)
+        self.intrinsic_matrix = np.eye(3, dtype=float)
+        self.extrinsic_matrix = np.eye(4, dtype=float)
         self.last_click = np.array([0, 0])
         self.new_click = False
         self.rgb_click_points = np.zeros((5, 2), int)
@@ -49,7 +49,8 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.0],[125.0,350.0,242.8]])
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.0],[125.0,350.0,242.8]],dtype=float)
+        self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
         self.block_detections = np.array([])
@@ -194,7 +195,33 @@ class Camera():
                     and draw on self.GridFrame the grid intersection points from self.grid_points
                     (hint: use the cv2.circle function to draw circles on the image)
         """
-        pass
+        if self.cameraCalibrated:
+            print("1", self.grid_points[0].shape)
+            z_values = np.array(np.zeros_like(self.grid_points[0]))
+            # print(z_values)
+            grid_3d_points_homo = np.stack((self.grid_points[0], self.grid_points[1], z_values, np.ones_like(self.grid_points[0])))
+            print("2",grid_3d_points_homo.shape)
+            grid_3d_points_homo = grid_3d_points_homo.reshape(4,-1)
+            print("3",grid_3d_points_homo.shape)
+            pt_c = np.matmul(self.extrinsic_matrix, grid_3d_points_homo)
+            print("4",pt_c, np.shape(pt_c))
+            proj = np.zeros((3,4), dtype=float)
+            proj[:3,:3] = np.eye(3, dtype=float)
+            pt_p = np.matmul(self.intrinsic_matrix, np.matmul(proj, pt_c))
+            print("5",pt_p.shape)
+            for i in range(grid_3d_points_homo.shape[1]):
+                pt_p[:4,i] = pt_p[:4,i]/pt_c[2,i]
+            pixel = pt_p[:3,].T
+
+            modified_image = self.VideoFrame.copy()
+            for pt in pixel:
+                center = cv2.perspectiveTransform(np.array([[[pt[0], pt[1]]]],dtype=np.float32), self.Homography)
+                cv2.circle(modified_image, [round(center[0][0][0]),round(center[0][0][1])], 5, (0, 255, 0), -1)
+            self.GridFrame = modified_image
+        else:
+            self.GridFrame = self.VideoFrame.copy()
+        # pass
+
      
     def drawTagsInRGBImage(self, msg):
         """
@@ -211,21 +238,41 @@ class Camera():
         
         center_pts = np.array([])
         corner_pts = np.array([])
-
         n = len(msg.detections)
-        for i in range(n):
-            center_pts = np.append(center_pts, round(msg.detections[i].centre.x))
-            center_pts = np.append(center_pts, round(msg.detections[i].centre.y))
-            point1 = (round(msg.detections[i].corners[0].x), round(msg.detections[i].corners[0].y))
-            point2 = (round(msg.detections[i].corners[1].x), round(msg.detections[i].corners[1].y))
-            point3 = (round(msg.detections[i].corners[2].x), round(msg.detections[i].corners[2].y))
-            point4 = (round(msg.detections[i].corners[3].x), round(msg.detections[i].corners[3].y))
-            points = np.array([point1, point2, point3, point4], dtype=np.int32).reshape((-1, 1, 2))
-            cv2.polylines(modified_image, [points], 5,(0, 0, 255), 2)
-            cv2.putText(modified_image, 'ID: {}'.format(msg.detections[i].id), (round(msg.detections[i].corners[1].x)+20, round(msg.detections[i].corners[1].y)+20),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2)
-        center_pts = center_pts.reshape(n,2)
-        for pt in center_pts:
-            cv2.circle(modified_image, [round(pt[0]),round(pt[1])], 5, (0, 255, 0), -1)
+
+        if self.cameraCalibrated:
+            for i in range(n):
+                center = cv2.perspectiveTransform(np.array([[[msg.detections[i].centre.x, msg.detections[i].centre.y]]],dtype=np.float32), self.Homography)
+                center_pts = np.append(center_pts, round(center[0][0][0]))
+                center_pts = np.append(center_pts, round(center[0][0][1]))
+                point1_tr = cv2.perspectiveTransform(np.array([[[msg.detections[i].corners[0].x, msg.detections[i].corners[0].y]]],dtype=np.float32), self.Homography)
+                point1 = (round(point1_tr[0][0][0]), round(point1_tr[0][0][1]))
+                point2_tr = cv2.perspectiveTransform(np.array([[[msg.detections[i].corners[1].x, msg.detections[i].corners[1].y]]],dtype=np.float32), self.Homography)
+                point2 = (round(point2_tr[0][0][0]), round(point2_tr[0][0][1]))
+                point3_tr = cv2.perspectiveTransform(np.array([[[msg.detections[i].corners[2].x, msg.detections[i].corners[2].y]]],dtype=np.float32), self.Homography)
+                point3 = (round(point3_tr[0][0][0]), round(point3_tr[0][0][1]))
+                point4_tr = cv2.perspectiveTransform(np.array([[[msg.detections[i].corners[3].x, msg.detections[i].corners[3].y]]],dtype=np.float32), self.Homography)
+                point4 = (round(point4_tr[0][0][0]), round(point4_tr[0][0][1]))
+                points = np.array([point1, point2, point3, point4], dtype=np.int32).reshape((-1, 1, 2))
+                cv2.polylines(modified_image, [points], 5,(0, 0, 255), 2)
+                cv2.putText(modified_image, 'ID: {}'.format(msg.detections[i].id), (round(point2_tr[0][0][0])+20, round(point2_tr[0][0][1])+20),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2)
+            center_pts = center_pts.reshape(n,2)
+            for pt in center_pts:
+                cv2.circle(modified_image, [round(pt[0]),round(pt[1])], 5, (0, 255, 0), -1)
+        else:
+            for i in range(n):
+                center_pts = np.append(center_pts, round(msg.detections[i].centre.x))
+                center_pts = np.append(center_pts, round(msg.detections[i].centre.y))
+                point1 = (round(msg.detections[i].corners[0].x), round(msg.detections[i].corners[0].y))
+                point2 = (round(msg.detections[i].corners[1].x), round(msg.detections[i].corners[1].y))
+                point3 = (round(msg.detections[i].corners[2].x), round(msg.detections[i].corners[2].y))
+                point4 = (round(msg.detections[i].corners[3].x), round(msg.detections[i].corners[3].y))
+                points = np.array([point1, point2, point3, point4], dtype=np.int32).reshape((-1, 1, 2))
+                cv2.polylines(modified_image, [points], 5,(0, 0, 255), 2)
+                cv2.putText(modified_image, 'ID: {}'.format(msg.detections[i].id), (round(msg.detections[i].corners[1].x)+20, round(msg.detections[i].corners[1].y)+20),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2)
+            center_pts = center_pts.reshape(n,2)
+            for pt in center_pts:
+                cv2.circle(modified_image, [round(pt[0]),round(pt[1])], 5, (0, 255, 0), -1)
 
         self.TagImageFrame = modified_image
 
@@ -240,10 +287,17 @@ class ImageListener(Node):
     def callback(self, data):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, data.encoding)
+            # print(data.shape, data.type, data.encoding)
+            # cv_image1 = np.zeros((720,1280, 3)).astype(np.uint8)
         except CvBridgeError as e:
             print(e)
         self.camera.VideoFrame = cv_image
-
+        if self.camera.cameraCalibrated:
+            # image = self.camera.VideoFrame
+            self.camera.VideoFrame = cv2.warpPerspective(cv_image, self.camera.Homography, (cv_image.shape[1], cv_image.shape[0]))
+        else:
+            self.camera.VideoFrame = cv_image
+        
 
 class TagDetectionListener(Node):
     def __init__(self, topic, camera):
@@ -271,8 +325,9 @@ class CameraInfoListener(Node):
         self.camera = camera
 
     def callback(self, data):
-        self.camera.intrinsic_matrix = np.reshape(data.k, (3, 3))
+        # self.camera.intrinsic_matrix = np.reshape(data.k, (3, 3))
         # print(self.camera.intrinsic_matrix)
+        pass
 
 
 class DepthListener(Node):
@@ -291,6 +346,13 @@ class DepthListener(Node):
             print(e)
         self.camera.DepthFrameRaw = cv_depth
         # self.camera.DepthFrameRaw = self.camera.DepthFrameRaw / 2
+
+        # if self.camera.cameraCalibrated:
+        #     # image = self.camera.VideoFrame
+        #     self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+        # else:
+        #     self.camera.DepthFrameRaw = cv_depth
+
         self.camera.ColorizeDepthFrame()
 
 

@@ -141,12 +141,13 @@ class StateMachine():
         self.next_state = "idle"
 
         """TODO Perform camera calibration routine here"""
-        self.camera.intrinsic_matrix = np.array([[918.3599853515625, 0.0, 661.1923217773438],[0.0,919.1538696289062, 356.59722900390625],[0.0, 0.0, 1.0]])
+        self.camera.intrinsic_matrix = np.array([[918.3599853515625, 0.0, 661.1923217773438],[0.0,919.1538696289062, 356.59722900390625],[0.0, 0.0, 1.0]], dtype=float)
+        # self.camera.intrinsic_matrix = np.array([[900, 0.0, 640], [0.0, 900, 360], [0.0, 0.0, 1.0]], dtype=float)
         self.camera.cameraCalibrated = True
-        dist_coeffs = np.array([[0.15564486384391785, -0.48568257689476013, -0.0019681642297655344, 0.0007267732871696353, 0.44230175018310547]])
+        dist_coeffs = np.array([[0.15564486384391785, -0.48568257689476013, -0.0019681642297655344, 0.0007267732871696353, 0.44230175018310547]], dtype=float)
         tag_info = self.camera.tag_detections
         n = len(tag_info.detections)
-        image_points = np.zeros((n,2))
+        image_points = np.zeros((n,2), dtype=float)
         for i in range(n):
             image_points[i] = [tag_info.detections[i].centre.x,tag_info.detections[i].centre.y]
             # image_points = np.append(image_points, tag_info.detections[i].centre.y)
@@ -158,19 +159,18 @@ class StateMachine():
                                                     self.camera.intrinsic_matrix,
                                                     dist_coeffs,
                                                     flags=cv2.SOLVEPNP_ITERATIVE)
-        # print(sucess, rot_vec, trans_vec)
         rot_mat, _ = cv2.Rodrigues(rot_vec)
-        # print(rot_mat)
-        extrinsic_mat = np.eye(4)
+        extrinsic_mat = np.eye(4, dtype=float)
         extrinsic_mat[:3,:3] = rot_mat
         extrinsic_mat[:3,3] = trans_vec.flatten()
         self.camera.extrinsic_matrix = extrinsic_mat
+        print(extrinsic_mat)
         self.status_message = "Calibration - Completed Calibration"
-        corner_world = np.array([[-500.0,-175.0,0,1],[500.0,-175.0,0,1],[500.0,475.0,0,1],[-500.0,475.0,0,1]]).T
+
+        corner_world = np.array([[-500.0,-175.0,0,1],[500.0,-175.0,0,1],[500.0,475.0,0,1],[-500.0,475.0,0,1]], dtype=float).T
         corner_camera = np.matmul(extrinsic_mat,corner_world)
-        print("camera:",corner_camera)
-        proj = np.zeros((3,4))
-        proj[:3,:3] = np.eye(3)
+        proj = np.zeros((3,4), dtype=float)
+        proj[:3,:3] = np.eye(3, dtype=float)
         corner_pixel = np.matmul(self.camera.intrinsic_matrix, np.matmul(proj, corner_camera))
         for i in range(4):
             corner_pixel[:4,i] = corner_pixel[:4,i]/corner_camera[2,i]
@@ -178,13 +178,8 @@ class StateMachine():
         # dest_pts = np.array([[180.0,540.0],[1040.0,540.0],[1040.0,180.0],[180.0,240.0]])
         src_pts = corner_pixel[:3,].T
         print(src_pts)
-        dest_pts = np.array([[140.0,685.0],[1140.0,685.0],[1140.0,35.0],[140.0,35.0]])
-        H = cv2.findHomography(src_pts, dest_pts)[0]
-        image = self.camera.VideoFrame
-        new_img = cv2.warpPerspective(image, H, (image.shape[1], image.shape[0]))
-        self.camera.VideoFrame = new_img
-
-        
+        dest_pts = np.array([[140.0,685.0],[1140.0,685.0],[1140.0,35.0],[140.0,35.0]], dtype=float)
+        self.camera.Homography = cv2.findHomography(src_pts, dest_pts)[0]
 
 
     def record_open(self):
