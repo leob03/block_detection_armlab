@@ -25,7 +25,7 @@ def clamp(angle):
     return angle
 
 
-def FK_dh(dh_params, joint_angles, link):
+def FK_dh(joint_angles, link):
     """!
     @brief      Get the 4x4 transformation matrix from link to world
 
@@ -37,14 +37,38 @@ def FK_dh(dh_params, joint_angles, link):
 
                 note: phi is the euler angle about the y-axis in the base frame
 
-    @param      dh_params     The dh parameters as a 2D list each row represents a link and has the format [a, alpha, d,
-                              theta]
+    @param      dh_params     The dh parameters as a 2D list each row represents a link and has the format 
+                              The one they want is [a, alpha, d, theta]
+                              The one I have is [theta, d, a, alpha]
     @param      joint_angles  The joint angles of the links
-    @param      link          The link to transform from
+    @param      link          The link to transform from (denoted by a number 0-4)
 
     @return     a transformation matrix representing the pose of the desired link
     """
-    pass
+    angle1 = joint_angles[0]
+    angle2 = joint_angles[1]
+    angle3 = joint_angles[2]
+    angle4 = joint_angles[3]
+    angle5 = joint_angles[4]
+    dhp = np.array([[angle1, 103.91, 0, np.pi/2],
+                          [angle2 + np.pi/2, 0, 200, 0],
+                          [-np.pi/2, 0, 50, 0],
+                          [angle3, 0, 200, 0],
+                          [angle4 + np.pi/2, 0, 0, np.pi/2],
+                          [angle5 - np.pi/2, 66 + 65, 0, 0]])
+
+    H = 0 # List of all of the As
+    count = 0
+    for param in dhp:
+        A_i = np.array([[np.cos(param[0]), -np.sin(param[0])*np.cos(param[3]), np.sin(param[0])*np.sin(param[3]), param[2]*np.cos(param[0])],
+                        [np.sin(param[0]), np.cos(param[0])*np.cos(param[3]), -np.cos(param[0])*np.sin(param[3]), param[2]*np.sin(param[0])],
+                        [0, np.sin(param[2]), np.cos(param[2]), param[1]],
+                        [0, 0, 0, 1]])
+        H = np.dot(H,A_i)
+        count += 1
+        if count > link:
+            break
+    return H
 
 
 def get_transform_from_dh(a, alpha, d, theta):
@@ -67,7 +91,7 @@ def get_euler_angles_from_T(T):
     """!
     @brief      Gets the euler angles from a transformation matrix.
 
-                TODO: Implement this function return the 3 Euler angles from a 4x4 transformation matrix T
+                TODO: Implement this fnction return the 3 Euler angles from a 4x4 transformation matrix T
                 If you like, add an argument to specify the Euler angles used (xyx, zyz, etc.)
 
     @param      T     transformation matrix
