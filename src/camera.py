@@ -177,6 +177,17 @@ class Camera():
                     locations in self.block_detections
         """
         pass
+    
+    def retrieve_area_color(self, data, contour, labels):
+        mask = np.zeros(data.shape[:2], dtype="uint8")
+        cv2.drawContours(mask, [contour], -1, 255, -1)
+        mean = cv2.mean(data, mask=mask)[:3]
+        min_dist = (np.inf, None)
+        for label in labels:
+            d = np.linalg.norm(label["color"] - np.array(mean))
+            if d < min_dist[0]:
+                min_dist = (d, label["id"])
+        return min_dist[1] 
 
     def detectBlocksInDepthImage(self):
         """!
@@ -184,7 +195,44 @@ class Camera():
 
                     TODO: Implement a blob detector to find blocks in the depth image
         """
-        pass
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        colors = list((
+            {'id': 'red', 'color': (10, 10, 127)},
+            {'id': 'orange', 'color': (30, 75, 150)},
+            {'id': 'yellow', 'color': (30, 150, 200)},
+            {'id': 'green', 'color': (20, 60, 20)},
+            {'id': 'blue', 'color': (100, 50, 0)},
+            {'id': 'violet', 'color': (100, 40, 80)})
+        )
+        cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
+        #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
+        """mask out arm & outside board"""
+        mask = np.zeros_like(self.DepthFrameRaw, dtype=np.uint8)
+        cv2.rectangle(mask, (275,120),(1100,720), 255, cv2.FILLED)
+        cv2.rectangle(mask, (575,414),(723,720), 0, cv2.FILLED)
+        cv2.rectangle(self.VideoFrame, (275,120),(1100,720), (255, 0, 0), 2)
+        cv2.rectangle(self.VideoFrame, (575,414),(723,720), (255, 0, 0), 2)
+        lower = -10
+        upper = 500
+        thresh = cv2.bitwise_and(cv2.inRange(self.DepthFrameRaw, lower, upper), mask)
+        # depending on your version of OpenCV, the following line could be:
+        # contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(self.VideoFrame, contours, -1, (0,255,255), thickness=1)
+        for contour in contours:
+            color = self.retrieve_area_color(self.VideoFrame, contour, colors)
+            theta = cv2.minAreaRect(contour)[2]
+            M = cv2.moments(contour)
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            cv2.putText(self.VideoFrame, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
+            cv2.putText(self.VideoFrame, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
+            print(color, int(theta), cx, cy)
+        #cv2.imshow("Threshold window", thresh)
+        cv2.imshow("Image window", self.VideoFrame)
+        k = cv2.waitKey(0)
+        if k == 27:
+            cv2.destroyAllWindows()
 
     def projectGridInRGBImage(self):
         """!
@@ -196,19 +244,19 @@ class Camera():
                     (hint: use the cv2.circle function to draw circles on the image)
         """
         if self.cameraCalibrated:
-            print("1", self.grid_points[0].shape)
+            # print("1", self.grid_points[0].shape)
             z_values = np.array(np.zeros_like(self.grid_points[0]))
             # print(z_values)
             grid_3d_points_homo = np.stack((self.grid_points[0], self.grid_points[1], z_values, np.ones_like(self.grid_points[0])))
-            print("2",grid_3d_points_homo.shape)
+            # print("2",grid_3d_points_homo.shape)
             grid_3d_points_homo = grid_3d_points_homo.reshape(4,-1)
-            print("3",grid_3d_points_homo.shape)
+            # print("3",grid_3d_points_homo.shape)
             pt_c = np.matmul(self.extrinsic_matrix, grid_3d_points_homo)
-            print("4",pt_c, np.shape(pt_c))
+            # print("4",pt_c, np.shape(pt_c))
             proj = np.zeros((3,4), dtype=float)
             proj[:3,:3] = np.eye(3, dtype=float)
             pt_p = np.matmul(self.intrinsic_matrix, np.matmul(proj, pt_c))
-            print("5",pt_p.shape)
+            # print("5",pt_p.shape)
             for i in range(grid_3d_points_homo.shape[1]):
                 pt_p[:4,i] = pt_p[:4,i]/pt_c[2,i]
             pixel = pt_p[:3,].T
