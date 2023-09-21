@@ -193,7 +193,13 @@ class RXArm(InterbotixManipulatorXS):
 
         @return     The EE pose as [x, y, z, phi] or as needed.
         """
-        return [0, 0, 0, 0]
+        #Hannah
+        joint_angles = self.position_fb
+        joint_link = 4
+        # print(joint_angles, joint_link)
+        H = FK_dh(joint_angles, joint_link)
+        # print(H)
+        return [H[0][3], H[1][3], H[2][3], 0]
 
     @_ensure_initialized
     def get_wrist_pose(self):

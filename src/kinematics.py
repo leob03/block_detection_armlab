@@ -57,13 +57,14 @@ def FK_dh(joint_angles, link):
                           [angle4 + np.pi/2, 0, 0, np.pi/2],
                           [angle5 - np.pi/2, 66 + 65, 0, 0]])
 
-    H = 0 # List of all of the As
+    H = np.eye(4) # List of all of the As
     count = 0
     for param in dhp:
         A_i = np.array([[np.cos(param[0]), -np.sin(param[0])*np.cos(param[3]), np.sin(param[0])*np.sin(param[3]), param[2]*np.cos(param[0])],
                         [np.sin(param[0]), np.cos(param[0])*np.cos(param[3]), -np.cos(param[0])*np.sin(param[3]), param[2]*np.sin(param[0])],
                         [0, np.sin(param[2]), np.cos(param[2]), param[1]],
                         [0, 0, 0, 1]])
+
         H = np.dot(H,A_i)
         count += 1
         if count > link:
