@@ -49,7 +49,7 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.0],[125.0,350.0,242.8]],dtype=float)
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,151.8],[125.0,350.0,242.8]],dtype=float)
         self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
@@ -189,7 +189,7 @@ class Camera():
                 min_dist = (d, label["id"])
         return min_dist[1] 
 
-    def detectBlocksInDepthImage(self):
+    def detectBlocksInDepthImage(self, image):
         """!
         @brief      Detect blocks from depth
 
@@ -210,29 +210,32 @@ class Camera():
         mask = np.zeros_like(self.DepthFrameRaw, dtype=np.uint8)
         cv2.rectangle(mask, (275,120),(1100,720), 255, cv2.FILLED)
         cv2.rectangle(mask, (575,414),(723,720), 0, cv2.FILLED)
-        cv2.rectangle(self.VideoFrame, (275,120),(1100,720), (255, 0, 0), 2)
-        cv2.rectangle(self.VideoFrame, (575,414),(723,720), (255, 0, 0), 2)
+        cv2.rectangle(image, (275,120),(1100,720), (255, 0, 0), 2)
+        cv2.rectangle(image, (575,414),(723,720), (255, 0, 0), 2)
         lower = -10
         upper = 500
         thresh = cv2.bitwise_and(cv2.inRange(self.DepthFrameRaw, lower, upper), mask)
+        print(thresh)
         # depending on your version of OpenCV, the following line could be:
         # contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(self.VideoFrame, contours, -1, (0,255,255), thickness=1)
+        cv2.drawContours(image, contours, -1, (0,255,255), thickness=1)
         for contour in contours:
             color = self.retrieve_area_color(self.VideoFrame, contour, colors)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
-            cv2.putText(self.VideoFrame, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
-            cv2.putText(self.VideoFrame, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
+            cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
+            cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
         #cv2.imshow("Threshold window", thresh)
-        cv2.imshow("Image window", self.VideoFrame)
-        k = cv2.waitKey(0)
-        if k == 27:
-            cv2.destroyAllWindows()
+        # cv2.imshow("Image window", self.VideoFrame)
+        # k = cv2.waitKey(0)
+        # if k == 27:
+        #     cv2.destroyAllWindows()
+        # self.VideoFrame = modified_image
+        return image
 
     def projectGridInRGBImage(self):
         """!
@@ -283,7 +286,7 @@ class Camera():
                     id of the tag: detection.id
         """
         modified_image = self.VideoFrame.copy()
-        
+        # print(self.VideoFrame.shape)
         center_pts = np.array([])
         corner_pts = np.array([])
         n = len(msg.detections)
@@ -335,16 +338,17 @@ class ImageListener(Node):
     def callback(self, data):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, data.encoding)
-            # print(data.shape, data.type, data.encoding)
-            # cv_image1 = np.zeros((720,1280, 3)).astype(np.uint8)
         except CvBridgeError as e:
             print(e)
-        self.camera.VideoFrame = cv_image
+        # self.camera.VideoFrame = cv_image
         if self.camera.cameraCalibrated:
             # image = self.camera.VideoFrame
             self.camera.VideoFrame = cv2.warpPerspective(cv_image, self.camera.Homography, (cv_image.shape[1], cv_image.shape[0]))
         else:
             self.camera.VideoFrame = cv_image
+            # modified_image = self.camera.detectBlocksInDepthImage(cv_image)
+            # self.camera.VideoFrame = modified_image
+
         
 
 class TagDetectionListener(Node):
@@ -441,6 +445,7 @@ class VideoThread(QThread):
                 depth_frame = self.camera.convertQtDepthFrame()
                 tag_frame = self.camera.convertQtTagImageFrame()
                 self.camera.projectGridInRGBImage()
+                # self.camera.detectBlocksInDepthImage()
                 grid_frame = self.camera.convertQtGridFrame()
                 if ((rgb_frame != None) & (depth_frame != None)):
                     self.updateFrame.emit(

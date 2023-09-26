@@ -183,17 +183,68 @@ class RXArm(InterbotixManipulatorXS):
         @return     The loads.
         """
         return self.effort_fb
+    
+    def isRotationMatrix(self, R):
+        Rt = np.transpose(R)
+        shouldBeIdentity = np.dot(Rt, R)
+        I = np.identity(3, dtype = R.dtype)
+        n = np.linalg.norm(I - shouldBeIdentity)
+        return n < 1e-6
+    
+    def rotationMatrixToEulerAngles(self, R) :
+        if not (self.isRotationMatrix(R)):
+            return np.array([0,0,0])
+        sy = np.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+        singular = sy < 1e-6
+        if  not singular :
+            x = np.arctan2(R[2,1] , R[2,2])
+            y = np.arctan2(-R[2,0], sy)
+            z = np.arctan2(R[1,0], R[0,0])
+        else :
+            x = np.arctan2(-R[1,2], R[1,1])
+            y = np.arctan2(-R[2,0], sy)
+            z = 0
+    
+        return np.array([x, y, z])
 
-
-#   @_ensure_initialized
-
+    # @_ensure_initialized
     def get_ee_pose(self):
         """!
         @brief      TODO Get the EE pose.
 
         @return     The EE pose as [x, y, z, phi] or as needed.
         """
-        return [0, 0, 0, 0]
+        #Hannah
+        # joint_angles = self.position_fb
+    
+        # joint_link = 2
+        # print(joint_angles, joint_link)
+        # H = FK_dh(joint_angles, joint_link)
+        # twist_coordinates = np.array([[0.0,      0.0,    0.0,   0.0, 0.0, 1.0],
+        #                               [-104.57,  0.0,    0.0,   0.0, 1.0, 0.0],
+        #                               [-304.57,  0.0,    50.0,  0.0, 1.0, 0.0],
+        #                               [-304.57,  0.0,    250.0, 0.0, 1.0, 0.0],
+        #                               [0.0,      304.57, 0.0,   1.0, 0.0, 0.0]])
+        
+        joint_angles = self.position_fb
+        # print(joint_angles)
+        twist_coordinates = np.array([[0.0,     0.0,      0.0,    0.0, 0.0, 1.0],
+                                      [0.0,    -0.10457,  0.0,   -1.0, 0.0, 0.0],
+                                      [0.0,    -0.30457,  0.05,  -1.0, 0.0, 0.0],
+                                      [0.0,    -0.30457,  0.25,  -1.0, 0.0, 0.0],
+                                      [-0.30457, 0.0,      0.0,    0.0, 1.0, 0.0]])
+        # twist_coordinates = np.array([[0.0,     0.0,      0.0,    0.0, 0.0, 1.0],
+        #                               [0.0,    -104.57,  0.0,   -1.0, 0.0, 0.0],
+        #                               [0.0,    -304.57,  50,  -1.0, 0.0, 0.0],
+        #                               [0.0,    -304.57,  250,  -1.0, 0.0, 0.0],
+        #                               [-304.57, 0.0,      0.0,    0.0, 1.0, 0.0]])
+        m_mat = np.array([[1.0, 0.0, 0.0, 0.0],
+                          [0.0, 1.0, 0.0, 0.408575],
+                          [0.0, 0.0, 1.0, 0.30457],
+                          [0.0, 0.0, 0.0, 1.0]])
+        H = FK_pox(joint_angles, m_mat, twist_coordinates)
+        phi, theta, psi = self.rotationMatrixToEulerAngles(H[:3,:3])
+        return [H[0][3], H[1][3], H[2][3], phi, theta, psi]
 
     @_ensure_initialized
     def get_wrist_pose(self):
@@ -225,6 +276,8 @@ class RXArm(InterbotixManipulatorXS):
         @return     The dh parameters.
         """
         return self.dh_params
+    
+
 
 
 class RXArmThread(QThread):
