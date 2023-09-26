@@ -45,20 +45,38 @@ def FK_dh(joint_angles, link):
 
     @return     a transformation matrix representing the pose of the desired link
     """
-    angle1 = joint_angles[0]
-    angle2 = joint_angles[1]
-    angle3 = joint_angles[2]
-    angle4 = joint_angles[3]
-    angle5 = joint_angles[4]
+    angle1 = joint_angles[0] % 2*np.pi
+    angle2 = -joint_angles[1] % 2*np.pi
+    angle3 = -joint_angles[2] % 2*np.pi
+    # angle3 = joint_angles[2] - np.pi/2
+    angle4 = -joint_angles[3] % 2*np.pi
+    angle5 = joint_angles[4] % 2*np.pi
+
+    print('Angle1:', angle1)
+    print('Angle2:', angle2)
+    print('Angle3:', angle3)
+    # print('Angle4:', angle4)
+    # print('Angle5:', angle5)
+
+
+    # dhp = np.array([[angle1, 103.91, 0, np.pi/2],
+    #                       [angle2 + np.pi/2, 0, 200, 0],
+    #                       [-np.pi/2, 0, 50, 0],
+    #                       [angle3, 0, 200, 0],
+    #                       [angle4 + np.pi/2, 0, 0, np.pi/2],
+    #                       [angle5 - np.pi/2, 66 + 65, 0, 0]])
+
+
     dhp = np.array([[angle1, 103.91, 0, np.pi/2],
-                          [angle2 + np.pi/2, 0, 200, 0],
-                          [-np.pi/2, 0, 50, 0],
-                          [angle3, 0, 200, 0],
-                          [angle4 + np.pi/2, 0, 0, np.pi/2],
-                          [angle5 - np.pi/2, 66 + 65, 0, 0]])
+                    [angle2 + np.pi/2, 0, 200, 0],
+                    [-np.pi/2, 0, 50, 0],
+                    [angle3, 0, 200, 0],
+                    [angle4 + np.pi/2, 0, 0, -np.pi/2],
+                    [angle5 - np.pi/2, 66 + 65, 0, 0]])
 
     H = np.eye(4) # List of all of the As
-    count = 0
+    count = 1
+    count2 = False
     for param in dhp:
         A_i = np.array([[np.cos(param[0]), -np.sin(param[0])*np.cos(param[3]), np.sin(param[0])*np.sin(param[3]), param[2]*np.cos(param[0])],
                         [np.sin(param[0]), np.cos(param[0])*np.cos(param[3]), -np.cos(param[0])*np.sin(param[3]), param[2]*np.sin(param[0])],
@@ -66,6 +84,9 @@ def FK_dh(joint_angles, link):
                         [0, 0, 0, 1]])
 
         H = np.dot(H,A_i)
+        if count == 2 and count2 == False:
+            count2 = True
+            break
         count += 1
         if count > link:
             break
@@ -115,6 +136,24 @@ def get_pose_from_T(T):
     pass
 
 
+def hat(twist):
+        Vx, Vy, Vz, Wx, Wy, Wz = twist
+        return np.array([[0, -Wz, Wy, Vx],
+                        [Wz, 0, -Wx, Vy],
+                        [-Wy, Wx, 0, Vz],
+                        [0, 0, 0, 0]])
+
+def get_expm(twist, theta):
+    twist_hat = hat(twist)
+    w_hat = twist_hat[0:3,0:3]
+    v = twist_hat[0:3,3]
+    e_wtheta = np.eye(3) + np.sin(theta) * w_hat + (1 - np.cos(theta)) * np.dot(w_hat, w_hat)
+    e_xitheta = np.r_[np.c_[e_wtheta, np.dot(np.eye(3) * theta + (1 - np.cos(theta)) * w_hat + (theta - np.sin(theta)) * np.dot(w_hat,w_hat), v)],
+                           [[0, 0, 0, 1]]]
+
+    return e_xitheta
+
+
 def FK_pox(joint_angles, m_mat, s_lst):
     """!
     @brief      Get a  representing the pose of the desired link
@@ -128,7 +167,21 @@ def FK_pox(joint_angles, m_mat, s_lst):
 
     @return     a 4x4 homogeneous matrix representing the pose of the desired link
     """
-    pass
+    H = np.eye(4)
+    links = np.shape(s_lst)[0]
+    # joint_angles = np.array([0.0,  np.pi/2,    0.0,   0.0, 0.0, 0.0])
+    for i in range(links):
+        # print(s_lst[i,:])
+        twisted = joint_angles[i]*s_lst[i,:]
+        # print(twisted)
+        # print(expm(hat(twisted)))
+        # H = np.dot(H, expm(hat(twisted)))
+        H = H @ expm(hat(twisted))
+        # H = np.dot(H, get_expm(s_lst[i,:], joint_angles[i]))
+
+    # return np.dot(m_mat, H)
+    # print(H)
+    return H@m_mat
 
 
 def to_s_matrix(w, v):
