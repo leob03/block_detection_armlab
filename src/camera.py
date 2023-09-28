@@ -32,6 +32,7 @@ class Camera():
         self.GridFrame = np.zeros((720,1280, 3)).astype(np.uint8)
         self.TagImageFrame = np.zeros((720,1280, 3)).astype(np.uint8)
         self.DepthFrameRaw = np.zeros((720,1280)).astype(np.uint16)
+        self.DepthFrameTrans = np.zeros((720,1280)).astype(np.uint16)
         """ Extra arrays for colormaping the depth image"""
         self.DepthFrameHSV = np.zeros((720,1280, 3)).astype(np.uint8)
         self.DepthFrameRGB = np.zeros((720,1280, 3)).astype(np.uint8)
@@ -49,7 +50,7 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,151.8],[125.0,350.0,242.8]],dtype=float)
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,150],[125.0,350.0,150]],dtype=float)
         self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
@@ -197,35 +198,35 @@ class Camera():
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
         colors = list((
-            {'id': 'red', 'color': (10, 10, 127)},
-            {'id': 'orange', 'color': (30, 75, 150)},
-            {'id': 'yellow', 'color': (30, 150, 200)},
-            {'id': 'green', 'color': (20, 60, 20)},
-            {'id': 'blue', 'color': (100, 50, 0)},
-            {'id': 'violet', 'color': (100, 40, 80)})
+            {'id': 'red', 'color': (51, 38, 135)},
+            {'id': 'orange', 'color': (51, 94, 172)},
+            {'id': 'yellow', 'color': (1, 182, 229)},
+            {'id': 'green', 'color': (62, 79, 41)},
+            {'id': 'blue', 'color': (93, 53, 0)})
+            # {'id': 'violet', 'color': (100, 40, 80)})
         )
-        cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
+        # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
-        mask = np.zeros_like(self.DepthFrameRaw, dtype=np.uint8)
+        depth_data = self.DepthFrameTrans
+        mask = np.zeros_like(depth_data, dtype=np.uint8)
         cv2.rectangle(mask, (275,120),(1100,720), 255, cv2.FILLED)
         cv2.rectangle(mask, (575,414),(723,720), 0, cv2.FILLED)
         cv2.rectangle(image, (275,120),(1100,720), (255, 0, 0), 2)
         cv2.rectangle(image, (575,414),(723,720), (255, 0, 0), 2)
-        lower = -10
-        upper = 500
-        thresh = cv2.bitwise_and(cv2.inRange(self.DepthFrameRaw, lower, upper), mask)
-        print(thresh)
+        lower = 600
+        upper = 1000
+        thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
         # depending on your version of OpenCV, the following line could be:
-        # contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(image, contours, -1, (0,255,255), thickness=1)
         for contour in contours:
             color = self.retrieve_area_color(self.VideoFrame, contour, colors)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
+            cx = int(M['m10']/(M['m00']+1e-12))
+            cy = int(M['m01']/(M['m00']+1e-12))
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
@@ -235,7 +236,6 @@ class Camera():
         # if k == 27:
         #     cv2.destroyAllWindows()
         # self.VideoFrame = modified_image
-        return image
 
     def projectGridInRGBImage(self):
         """!
@@ -343,7 +343,9 @@ class ImageListener(Node):
         # self.camera.VideoFrame = cv_image
         if self.camera.cameraCalibrated:
             # image = self.camera.VideoFrame
-            self.camera.VideoFrame = cv2.warpPerspective(cv_image, self.camera.Homography, (cv_image.shape[1], cv_image.shape[0]))
+            cv_image = cv2.warpPerspective(cv_image, self.camera.Homography, (cv_image.shape[1], cv_image.shape[0]))
+            self.camera.detectBlocksInDepthImage(cv_image)
+            self.camera.VideoFrame = cv_image
         else:
             self.camera.VideoFrame = cv_image
             # modified_image = self.camera.detectBlocksInDepthImage(cv_image)
@@ -399,9 +401,10 @@ class DepthListener(Node):
         self.camera.DepthFrameRaw = cv_depth
         # self.camera.DepthFrameRaw = self.camera.DepthFrameRaw / 2
 
-        # if self.camera.cameraCalibrated:
-        #     # image = self.camera.VideoFrame
-        #     self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+        if self.camera.cameraCalibrated:
+            # image = self.camera.VideoFrame
+            self.camera.DepthFrameTrans = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+            # self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
         # else:
         #     self.camera.DepthFrameRaw = cv_depth
 

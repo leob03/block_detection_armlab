@@ -158,9 +158,9 @@ class Gui(QMainWindow):
         self.ui.rdoutX.setText(str("%+.2f mm" % (1000 * pos[0])))
         self.ui.rdoutY.setText(str("%+.2f mm" % (1000 * pos[1])))
         self.ui.rdoutZ.setText(str("%+.2f mm" % (1000 * pos[2])))
-        self.ui.rdoutPhi.setText(str("%+.2f" % (pos[3])))
-        self.ui.rdoutTheta.setText(str("%+.2f" % (pos[4])))
-        self.ui.rdoutPsi.setText(str("%+.2f" % (pos[5])))
+        #self.ui.rdoutPhi.setText(str("%+.2f rad" % (pos[3])))
+        #self.ui.rdoutTheta.setText(str("%+.2f" % (pos[4])))
+        #self.ui.rdoutPsi.setText(str("%+.2f" % (pos[5])))
 
     @pyqtSlot(QImage, QImage, QImage, QImage)
     def setImage(self, rgb_image, depth_image, tag_image, grid_image):
@@ -268,6 +268,7 @@ class Gui(QMainWindow):
 
             ## new
             ori_pt = cv2.perspectiveTransform(np.array([[[pt.x(), pt.y()]]],dtype=np.float32), np.linalg.inv(self.camera.Homography))
+            # ori_pt = cv2.perspectiveTransform(np.array([[[pt.x(), pt.y()]]],dtype=np.float32), np.eye(3))
             d = np.array([[round(ori_pt[0][0][0])], [round(ori_pt[0][0][1])], [1.0]], dtype=float)
             z = self.camera.DepthFrameRaw[round(ori_pt[0][0][1])][round(ori_pt[0][0][0])]
             self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" %

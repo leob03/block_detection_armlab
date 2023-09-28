@@ -47,21 +47,21 @@ class ImageListener(Node):
         k = cv2.waitKey(1) 
         if k == ord('s'): # wait for 's' key to save and exit
             cv2.imwrite('saved_rgb_image'+str(img_counter)+'.png',cv_image)
-            cv2.imwrite('saved_depth_image'+str(img_counter)+'.png',color_depth)
+            cv2.imwrite('saved_depth_image'+str(img_counter)+'.png',cv_depth)
             img_counter += 1
             print("rgb/depth images saved!")
 
 
 class DepthListener(Node):
     def __init__(self, topic):
-        global color_depth
+        global cv_depth
         super().__init__('depth_listener')
         self.topic = topic
         self.bridge = CvBridge()
         self.image_sub = self.create_subscription(Image, topic, self.callback, 10)
 
     def callback(self,data):
-        global color_depth
+        global cv_depth
         global img_counter
         try:
             cv_depth = self.bridge.imgmsg_to_cv2(data, data.encoding)
@@ -70,12 +70,12 @@ class DepthListener(Node):
 
         clipped = np.clip(cv_depth, 0, 2000).astype(np.uint8)
         normed = cv2.normalize(clipped, clipped, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-        color_depth = cv2.applyColorMap(normed, cv2.COLORMAP_JET)
-        cv2.imshow("Depth window", color_depth)
+        # color_depth = cv2.applyColorMap(normed, cv2.COLORMAP_JET)
+        # cv2.imshow("Depth window", color_depth)
         k = cv2.waitKey(1) 
         if k == ord('s'): # wait for 's' key to save and exit
             cv2.imwrite('saved_rgb_image'+str(img_counter)+'.png',cv_image)
-            cv2.imwrite('saved_depth_image'+str(img_counter)+'.png',color_depth)
+            cv2.imwrite('saved_depth_image'+str(img_counter)+'.png', cv_depth)
             img_counter += 1
             print("rgb/depth images saved!")
 
