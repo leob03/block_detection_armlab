@@ -12,6 +12,7 @@ The RXArm class contains:
 You will upgrade some functions and also implement others according to the comments given in the code.
 """
 import numpy as np
+from scipy.spatial.transform import Rotation
 from functools import partial
 from kinematics import FK_dh, FK_pox, get_pose_from_T
 import time
@@ -239,12 +240,15 @@ class RXArm(InterbotixManipulatorXS):
         #                               [0.0,    -304.57,  250,  -1.0, 0.0, 0.0],
         #                               [-304.57, 0.0,      0.0,    0.0, 1.0, 0.0]])
         m_mat = np.array([[1.0, 0.0, 0.0, 0.0],
-                          [0.0, 1.0, 0.0, 0.408575],
+                          [0.0, 1.0, 0.0, 0.42415],
                           [0.0, 0.0, 1.0, 0.30457],
                           [0.0, 0.0, 0.0, 1.0]])
         H = FK_pox(joint_angles, m_mat, twist_coordinates)
-        phi, theta, psi = self.rotationMatrixToEulerAngles(H[:3,:3])
+        # phi, theta, psi = self.rotationMatrixToEulerAngles(H[:3,:3])
+        r = Rotation.from_matrix(H[:3,:3])
+        phi, theta, psi = r.as_euler("zyz", degrees=True)
         return [H[0][3], H[1][3], H[2][3], phi, theta, psi]
+        # return [H[0][3], H[1][3], H[2][3], r[0], r[1], r[2]]
 
     @_ensure_initialized
     def get_wrist_pose(self):
