@@ -164,7 +164,7 @@ class StateMachine():
         extrinsic_mat[:3,:3] = rot_mat
         extrinsic_mat[:3,3] = trans_vec.flatten()
         self.camera.extrinsic_matrix = extrinsic_mat
-        print(extrinsic_mat)
+        # print(extrinsic_mat)
         self.status_message = "Calibration - Completed Calibration"
 
         corner_world = np.array([[-500.0,-175.0,0,1],[500.0,-175.0,0,1],[500.0,475.0,0,1],[-500.0,475.0,0,1]], dtype=float).T

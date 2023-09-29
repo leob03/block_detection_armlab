@@ -209,20 +209,36 @@ class Camera():
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
         depth_data = self.DepthFrameTrans
-        mask = np.zeros_like(depth_data, dtype=np.uint8)
-        cv2.rectangle(mask, (275,120),(1100,720), 255, cv2.FILLED)
-        cv2.rectangle(mask, (575,414),(723,720), 0, cv2.FILLED)
-        cv2.rectangle(image, (275,120),(1100,720), (255, 0, 0), 2)
-        cv2.rectangle(image, (575,414),(723,720), (255, 0, 0), 2)
-        lower = 600
-        upper = 1000
-        thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
+
+        height, width = depth_data.shape
+        y, x = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
+        pixel_coordinates = np.stack((x, y, np.ones_like(x)), axis=-1)
+        camera_coordinates = np.linalg.solve(self.intrinsic_matrix, pixel_coordinates.reshape(-1, 3).T).reshape(3, height, width)
+        camera_coordinates_3d = camera_coordinates * depth_data
+        camera_coordinates_3d = camera_coordinates_3d.reshape(3, height, width)
+        camera_coordinates_homogeneous = np.vstack((camera_coordinates_3d, np.ones((1, height, width))))
+        world_coordinates_homogeneous = np.dot(self.extrinsic_matrix, camera_coordinates_homogeneous.reshape(4, -1))
+        world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
+        height_map = world_coordinates[2, :, :]
+
+        # mask = np.zeros_like(depth_data, dtype=np.uint8)
+        mask = np.zeros_like(height_map, dtype=np.uint8)
+        cv2.rectangle(mask, (150,30),(1182,683), 255, cv2.FILLED)
+        cv2.rectangle(mask, (540,385),(741,687), 0, cv2.FILLED)
+        cv2.rectangle(image, (150,30),(1182,683), (255, 0, 0), 2)
+        cv2.rectangle(image, (540,385),(741,687), (255, 0, 0), 2)
+        lower = 20
+        upper = 60
+        # thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
+        thresh = cv2.bitwise_and(cv2.inRange(height_map, lower, upper), mask)
+
         # depending on your version of OpenCV, the following line could be:
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(image, contours, -1, (0,255,255), thickness=1)
         for contour in contours:
-            color = self.retrieve_area_color(self.VideoFrame, contour, colors)
+            rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
+            color = self.retrieve_area_color(rgb_image, contour, colors)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
             cx = int(M['m10']/(M['m00']+1e-12))
@@ -230,12 +246,12 @@ class Camera():
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
-        #cv2.imshow("Threshold window", thresh)
+        # cv2.imshow("Threshold window", thresh)
         # cv2.imshow("Image window", self.VideoFrame)
+        # cv2.waitKey(0)
         # k = cv2.waitKey(0)
         # if k == 27:
         #     cv2.destroyAllWindows()
-        # self.VideoFrame = modified_image
 
     def projectGridInRGBImage(self):
         """!
@@ -334,8 +350,10 @@ class ImageListener(Node):
         self.bridge = CvBridge()
         self.image_sub = self.create_subscription(Image, topic, self.callback, 10)
         self.camera = camera
+        self.counter = 0
 
     def callback(self, data):
+        self.counter += 1
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, data.encoding)
         except CvBridgeError as e:
@@ -344,6 +362,7 @@ class ImageListener(Node):
         if self.camera.cameraCalibrated:
             # image = self.camera.VideoFrame
             cv_image = cv2.warpPerspective(cv_image, self.camera.Homography, (cv_image.shape[1], cv_image.shape[0]))
+            # if self.counter % 20 == 0:
             self.camera.detectBlocksInDepthImage(cv_image)
             self.camera.VideoFrame = cv_image
         else:
