@@ -50,7 +50,7 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,150],[125.0,350.0,150]],dtype=float)
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.5],[125.0,-50.0,152.5]],dtype=float)
         self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
@@ -209,13 +209,16 @@ class Camera():
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
         depth_data = self.DepthFrameTrans
+        # print("depth_data", depth_data)
 
         height, width = depth_data.shape
         y, x = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
-        pixel_coordinates = np.stack((x, y, np.ones_like(x)), axis=-1)
-        camera_coordinates = np.linalg.solve(self.intrinsic_matrix, pixel_coordinates.reshape(-1, 3).T).reshape(3, height, width)
-        camera_coordinates_3d = camera_coordinates * depth_data
-        camera_coordinates_3d = camera_coordinates_3d.reshape(3, height, width)
+
+        pixel_coordinates = np.vstack((x.ravel(), y.ravel(), np.ones_like(x.ravel())))
+        camera_coordinates = np.dot(np.linalg.inv(self.intrinsic_matrix), pixel_coordinates)
+        camera_coordinates_3d = np.multiply(camera_coordinates, depth_data.ravel())
+        camera_coordinates_3d = camera_coordinates_3d.reshape((3, height, width))
+
         camera_coordinates_homogeneous = np.vstack((camera_coordinates_3d, np.ones((1, height, width))))
         world_coordinates_homogeneous = np.dot(self.extrinsic_matrix, camera_coordinates_homogeneous.reshape(4, -1))
         world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
@@ -223,12 +226,12 @@ class Camera():
 
         # mask = np.zeros_like(depth_data, dtype=np.uint8)
         mask = np.zeros_like(height_map, dtype=np.uint8)
-        cv2.rectangle(mask, (150,30),(1182,683), 255, cv2.FILLED)
-        cv2.rectangle(mask, (540,385),(741,687), 0, cv2.FILLED)
-        cv2.rectangle(image, (150,30),(1182,683), (255, 0, 0), 2)
-        cv2.rectangle(image, (540,385),(741,687), (255, 0, 0), 2)
-        lower = 20
-        upper = 60
+        cv2.rectangle(mask, (150,30),(1129,681), 255, cv2.FILLED)
+        cv2.rectangle(mask, (540,385),(741,681), 0, cv2.FILLED)
+        cv2.rectangle(image, (150,30),(1129,681), (255, 0, 0), 2)
+        cv2.rectangle(image, (540,385),(741,681), (255, 0, 0), 2)
+        lower = 10
+        upper = 500
         # thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
         thresh = cv2.bitwise_and(cv2.inRange(height_map, lower, upper), mask)
 
@@ -246,9 +249,9 @@ class Camera():
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
-        # cv2.imshow("Threshold window", thresh)
+        cv2.imshow("Threshold window", thresh)
         # cv2.imshow("Image window", self.VideoFrame)
-        # cv2.waitKey(0)
+        cv2.waitKey(0)
         # k = cv2.waitKey(0)
         # if k == 27:
         #     cv2.destroyAllWindows()
