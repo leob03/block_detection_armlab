@@ -142,17 +142,21 @@ class StateMachine():
 
         """TODO Perform camera calibration routine here"""
         self.camera.intrinsic_matrix = np.array([[918.3599853515625, 0.0, 661.1923217773438],[0.0,919.1538696289062, 356.59722900390625],[0.0, 0.0, 1.0]], dtype=float)
+        # self.camera.intrinsic_matrix = np.array([[898.831565, 0.000000, 709.284902], [0.000000, 897.087012, 402.250269], [0.000000, 0.000000, 1.000000]],dtype=float)
         # self.camera.intrinsic_matrix = np.array([[900, 0.0, 640], [0.0, 900, 360], [0.0, 0.0, 1.0]], dtype=float)
         self.camera.cameraCalibrated = True
         dist_coeffs = np.array([[0.15564486384391785, -0.48568257689476013, -0.0019681642297655344, 0.0007267732871696353, 0.44230175018310547]], dtype=float)
         tag_info = self.camera.tag_detections
         n = len(tag_info.detections)
-        image_points = np.zeros((n,2), dtype=float)
+        image_points = np.zeros((n*5,2), dtype=float)
         for i in range(n):
-            image_points[i] = [tag_info.detections[i].centre.x,tag_info.detections[i].centre.y]
-            # image_points = np.append(image_points, tag_info.detections[i].centre.y)
+            image_points[5*i] = [tag_info.detections[i].centre.x,tag_info.detections[i].centre.y]
+            image_points[5*i+1] = [tag_info.detections[i].corners[0].x,tag_info.detections[i].corners[0].y]
+            image_points[5*i+2] = [tag_info.detections[i].corners[1].x,tag_info.detections[i].corners[1].y]
+            image_points[5*i+3] = [tag_info.detections[i].corners[2].x,tag_info.detections[i].corners[2].y]
+            image_points[5*i+4] = [tag_info.detections[i].corners[3].x,tag_info.detections[i].corners[3].y]
             
-        image_points = np.ascontiguousarray(image_points).reshape((n,1,2))
+        image_points = np.ascontiguousarray(image_points).reshape((n*5,1,2))
         model_points = self.camera.tag_locations
         (sucess, rot_vec, trans_vec) = cv2.solvePnP(model_points,
                                                     image_points,

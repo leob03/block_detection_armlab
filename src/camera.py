@@ -41,6 +41,7 @@ class Camera():
         # mouse clicks & calibration variables
         self.cameraCalibrated = False
         self.intrinsic_matrix = np.eye(3, dtype=float)
+        # self.intrinsic_matrix = np.array([[898.831565, 0.000000, 709.284902], [0.000000, 897.087012, 402.250269], [0.000000, 0.000000, 1.000000]],dtype=float)
         self.extrinsic_matrix = np.eye(4, dtype=float)
         self.last_click = np.array([0, 0])
         self.new_click = False
@@ -50,7 +51,7 @@ class Camera():
         self.grid_y_points = np.arange(-175, 525, 50)
         self.grid_points = np.array(np.meshgrid(self.grid_x_points, self.grid_y_points))
         self.tag_detections = np.array([])
-        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [250.0, -25.0, 0.0], [250.0, 275.0, 0.0], [-250.0, 275.0, 0.0],[-125.0,350.0,152.5],[125.0,-50.0,152.5]],dtype=float)
+        self.tag_locations = np.array([[-250.0, -25.0, 0.0], [-262.5, -37.5, 0.0],[-237.5, -37.5, 0.0],[-237.5, -12.5, 0.0],[-265.5, -12.5, 0.0],[250.0, -25.0, 0.0], [237.5, -37.5, 0.0],[262.5, -37.5, 0.0],[262.5, -12.5, 0.0],[237.5, -12.5, 0.0],[250.0, 275.0, 0.0],[237.5, 262.5, 0.0],[262.5, 262.5, 0.0],[262.5, 287.5, 0.0],[237.5, 287.5, 0.0], [-250.0, 275.0, 0.0],[-262.5, 262.5, 0.0],[-237.5, 262.5, 0.0],[-237.5, 287.5, 0.0],[-262.5, 287.5, 0.0],[-125.0,350.0,152.5],[-137.5,337.5,152.5],[-112.5,337.5,152.5],[-112.5,362.5,152.5],[-137.5,362.5,152.5],[125.0,-50.0,152.5],[112.5,-62.5,152.5],[137.5,-62.5,152.5],[137.5,-37.5,152.5],[112.5,-37.5,152.5]],dtype=float)
         self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
@@ -189,6 +190,7 @@ class Camera():
             if d < min_dist[0]:
                 min_dist = (d, label["id"])
         return min_dist[1] 
+    
 
     def detectBlocksInDepthImage(self, image):
         """!
@@ -224,34 +226,83 @@ class Camera():
         world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
         height_map = world_coordinates[2, :, :]
 
+        pitch_degrees = 0 # Adjust as needed
+        roll_degrees = 7.0   # Adjust as needed
+
+        # Calculate the slope in radians
+        pitch_radians = np.radians(pitch_degrees)
+        roll_radians = np.radians(roll_degrees)
+
+        # Calculate the height offset based on the slope
+        height_offset = np.tan(pitch_radians) * world_coordinates[0, :, :] + np.tan(roll_radians) * world_coordinates[1, :, :]
+
+        # Apply the height offset to the height_map
+        height_map_with_offset = height_map - height_offset
+
+        # min_height = np.min(height_map_with_offset)
+        # max_height = np.max(height_map_with_offset)
+        # normalized_height_map = (height_map_with_offset - min_height) / (max_height - min_height)
+
+        # # Create a custom colormap (you can define your own color scheme)
+        # # Here, we create a simple gradient from blue to red
+        # custom_colormap = cv2.applyColorMap((normalized_height_map * 255).astype(np.uint8), cv2.COLORMAP_JET)
+
+        # cv2.imshow("Height Map with Offset", custom_colormap)
+        # cv2.waitKey(0)
+
         # mask = np.zeros_like(depth_data, dtype=np.uint8)
-        mask = np.zeros_like(height_map, dtype=np.uint8)
+        mask = np.zeros_like(height_map_with_offset, dtype=np.uint8)
         cv2.rectangle(mask, (150,30),(1129,681), 255, cv2.FILLED)
         cv2.rectangle(mask, (540,385),(741,681), 0, cv2.FILLED)
         cv2.rectangle(image, (150,30),(1129,681), (255, 0, 0), 2)
         cv2.rectangle(image, (540,385),(741,681), (255, 0, 0), 2)
-        lower = 10
-        upper = 500
+        lower = 0
+        upper = 80
+
         # thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
-        thresh = cv2.bitwise_and(cv2.inRange(height_map, lower, upper), mask)
+        thresh = cv2.bitwise_and(cv2.inRange(height_map_with_offset, lower, upper), mask)
+
+        # cv2.imshow("Threshold window", thresh)
+        # # cv2.imshow("Image window", self.VideoFrame)
+        # cv2.waitKey(0)
 
         # depending on your version of OpenCV, the following line could be:
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(image, contours, -1, (0,255,255), thickness=1)
+        
+        # Apply filtering to the contours
+        filtered_contours = []
         for contour in contours:
+            area = cv2.contourArea(contour)
+            if 300 < area < 5000:  # Adjust these values
+                filtered_contours.append(contour)
+
+        # Define block detection criteria based on size or aspect ratio
+        detected_blocks = []
+        for contour in filtered_contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if w > 20 and h > 20:
+                detected_blocks.append(contour)
+
+        # Draw only the detected blocks on the image
+        cv2.drawContours(image, detected_blocks, -1, (0, 255, 0), thickness=2)
+
+
+        for contour in detected_blocks:
             rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
             color = self.retrieve_area_color(rgb_image, contour, colors)
+            # area = cv2.contourArea(contour)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
             cx = int(M['m10']/(M['m00']+1e-12))
             cy = int(M['m01']/(M['m00']+1e-12))
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
+            # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
-        cv2.imshow("Threshold window", thresh)
-        # cv2.imshow("Image window", self.VideoFrame)
-        cv2.waitKey(0)
+        
+        # cv2.imshow("Threshold window", thresh)
+        # # cv2.imshow("Image window", self.VideoFrame)
+        # cv2.waitKey(0)
         # k = cv2.waitKey(0)
         # if k == 27:
         #     cv2.destroyAllWindows()
@@ -424,9 +475,23 @@ class DepthListener(Node):
         # self.camera.DepthFrameRaw = self.camera.DepthFrameRaw / 2
 
         if self.camera.cameraCalibrated:
-            # image = self.camera.VideoFrame
+            
+            # pitch_degrees = 0  # Adjust as needed
+            # roll_degrees = 5.0
+
+            # pitch_radians = np.radians(pitch_degrees)
+            # roll_radians = np.radians(roll_degrees)
+
+            # # Calculate the height offset for each pixel in the depth image
+            # height_offset = np.tan(pitch_radians) * data + np.tan(roll_radians) * data
+
+
+            # # Add the height offset to the depth image
+            # data += height_offset
+            
+            # cv_depth_with_offset = self.bridge.imgmsg_to_cv2(data, data.encoding)
             self.camera.DepthFrameTrans = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
-            # self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+            # self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth_with_offset, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
         # else:
         #     self.camera.DepthFrameRaw = cv_depth
 
