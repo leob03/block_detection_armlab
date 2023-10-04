@@ -239,14 +239,16 @@ class RXArm(InterbotixManipulatorXS):
         #                               [0.0,    -304.57,  50,  -1.0, 0.0, 0.0],
         #                               [0.0,    -304.57,  250,  -1.0, 0.0, 0.0],
         #                               [-304.57, 0.0,      0.0,    0.0, 1.0, 0.0]])
-        m_mat = np.array([[1.0, 0.0, 0.0, 0.0],
-                          [0.0, 1.0, 0.0, 0.42415],
-                          [0.0, 0.0, 1.0, 0.30457],
+        m_mat = np.array([[0.0, 1.0, 0.0, 0.0],
+                          [0.0, 0.0, 1.0, 0.42415],
+                          [1.0, 0.0, 0.0, 0.30457],
                           [0.0, 0.0, 0.0, 1.0]])
         H = FK_pox(joint_angles, m_mat, twist_coordinates)
         # phi, theta, psi = self.rotationMatrixToEulerAngles(H[:3,:3])
         r = Rotation.from_matrix(H[:3,:3])
-        phi, theta, psi = r.as_euler("zyz", degrees=True)
+        # phi, theta, psi = r.as_euler("zyz", degrees=True)
+        phi, theta, psi = H[0:3, 2]
+        # phi, theta, psi =  [0.1, 0.1, 0.1]
         return [H[0][3], H[1][3], H[2][3], phi, theta, psi]
         # return [H[0][3], H[1][3], H[2][3], r[0], r[1], r[2]]
 

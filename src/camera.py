@@ -68,7 +68,8 @@ class Camera():
         """!
         @brief Converts frame to colormaped formats in HSV and RGB
         """
-        self.DepthFrameHSV[..., 0] = self.DepthFrameRaw >> 1
+        # self.DepthFrameHSV[..., 0] = self.DepthFrameRaw >> 1
+        self.DepthFrameHSV[..., 0] = np.right_shift(self.DepthFrameRaw.astype(np.uint16), 1)
         self.DepthFrameHSV[..., 1] = 0xFF
         self.DepthFrameHSV[..., 2] = 0x9F
         self.DepthFrameRGB = cv2.cvtColor(self.DepthFrameHSV,
@@ -475,23 +476,11 @@ class DepthListener(Node):
         # self.camera.DepthFrameRaw = self.camera.DepthFrameRaw / 2
 
         if self.camera.cameraCalibrated:
-            
-            # pitch_degrees = 0  # Adjust as needed
-            # roll_degrees = 5.0
-
-            # pitch_radians = np.radians(pitch_degrees)
-            # roll_radians = np.radians(roll_degrees)
-
-            # # Calculate the height offset for each pixel in the depth image
-            # height_offset = np.tan(pitch_radians) * data + np.tan(roll_radians) * data
-
-
-            # # Add the height offset to the depth image
-            # data += height_offset
-            
-            # cv_depth_with_offset = self.bridge.imgmsg_to_cv2(data, data.encoding)
+        
+            #substract cv_depth by a slope offset of depth here to obtain cv_depth_with_offset
+            # print(cv_depth.dtype, cv_depth.shape)
             self.camera.DepthFrameTrans = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
-            # self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth_with_offset, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+            self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
         # else:
         #     self.camera.DepthFrameRaw = cv_depth
 
