@@ -56,6 +56,7 @@ class Camera():
         """ block info """
         self.block_contours = np.array([])
         self.block_detections = np.array([])
+        self.last_click_3d = np.array([0, 0, 0], dtype=float)
 
     def processVideoFrame(self):
         """!

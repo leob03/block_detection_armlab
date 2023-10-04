@@ -95,6 +95,9 @@ class StateMachine():
         if self.next_state == 'clear':
             self.clear()
 
+        if self.next_state == 'grab':
+            self.grab()
+
 
     """Functions run for each state"""
 
@@ -111,6 +114,9 @@ class StateMachine():
         """
         self.status_message = "State: Idle - Waiting for input"
         self.current_state = "idle"
+        if self.camera.new_click:
+            self.next_state = "grab"
+            self.camera.new_click = False
 
     def estop(self):
         """!
@@ -186,6 +192,12 @@ class StateMachine():
         self.camera.Homography = cv2.findHomography(src_pts, dest_pts)[0]
 
 
+    def grab(self):
+        """!
+        @brief      Perform the grab of the click and grab
+        """
+        x,y,z = self.camera.last_click_3d
+        
     def record_open(self):
         self.status_message = "State: Record Waypoints - Recording waypoints"
         self.current_state = "record"

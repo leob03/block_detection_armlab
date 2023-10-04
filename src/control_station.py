@@ -159,8 +159,8 @@ class Gui(QMainWindow):
         self.ui.rdoutY.setText(str("%+.2f mm" % (1000 * pos[1])))
         self.ui.rdoutZ.setText(str("%+.2f mm" % (1000 * pos[2])))
         self.ui.rdoutPhi.setText(str("%+.2f rad" % (pos[3])))
-        self.ui.rdoutTheta.setText(str("%+.2f" % (pos[4])))
-        self.ui.rdoutPsi.setText(str("%+.2f" % (pos[5])))
+        self.ui.rdoutTheta.setText(str("%+.2f rad" % (pos[4])))
+        self.ui.rdoutPsi.setText(str("%+.2f rad" % (pos[5])))
 
     @pyqtSlot(QImage, QImage, QImage, QImage)
     def setImage(self, rgb_image, depth_image, tag_image, grid_image):
@@ -280,6 +280,8 @@ class Gui(QMainWindow):
             c = np.matmul(np.linalg.inv(k*1/z),d)
             C = np.array([[c[0]], [c[1]], [c[2]],[1]], dtype=float)
             w = np.matmul(np.linalg.inv(H),C)
+            if self.camera.new_click:
+                self.camera.last_click_3d = w
 
             self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" %
                                              (w[0], w[1], w[2]))
