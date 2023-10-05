@@ -221,12 +221,29 @@ class Camera():
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
         colors = list((
-            {'id': 'red', 'color': (51, 38, 135)},
-            {'id': 'orange', 'color': (51, 94, 172)},
-            {'id': 'yellow', 'color': (1, 182, 229)},
-            {'id': 'green', 'color': (62, 79, 41)},
-            {'id': 'blue', 'color': (93, 53, 0)},
-            {'id': 'violet', 'color': (100, 40, 80)})
+            # {'id': 'red', 'color': (51, 38, 135)},
+            # {'id': 'orange', 'color': (51, 94, 172)},
+            # {'id': 'yellow', 'color': (1, 182, 229)},
+            # {'id': 'green', 'color': (62, 79, 41)},
+            # {'id': 'blue', 'color': (93, 53, 0)},
+            # {'id': 'violet', 'color': (100, 40, 80)}
+            {'id': 'red', 'color': (63, 53, 128)},
+            {'id': 'red', 'color': (75, 61, 181)},
+            {'id': 'red', 'color': (34, 21, 145)},
+            {'id': 'orange', 'color': (47, 101, 193)},
+            {'id': 'orange', 'color': (30, 62, 138)},
+            {'id': 'yellow', 'color': (44, 155, 184)},
+            {'id': 'yellow', 'color': (54, 187, 214)},
+            {'id': 'yellow', 'color': (28, 198, 231)},
+            {'id': 'green', 'color': (84, 123, 43)},
+            {'id': 'green', 'color': (51, 82, 40)},
+            {'id': 'blue', 'color': (120, 68, 2)},
+            {'id': 'blue', 'color': (108, 46, 0)},
+            {'id': 'blue', 'color': (138, 87, 0)},
+            {'id': 'violet', 'color': (54, 29, 38)},
+            {'id': 'violet', 'color': (112, 66, 51)},
+            {'id': 'pink', 'color': (74, 60, 152)}
+            )
         )
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
@@ -305,7 +322,8 @@ class Camera():
 
 
         for contour in detected_blocks:
-            rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
+            # rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
+            rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_BGR2RGB)
             color = self.retrieve_area_color(rgb_image, contour, colors)
             # area = cv2.contourArea(contour)
             theta = cv2.minAreaRect(contour)[2]
