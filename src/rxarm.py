@@ -254,12 +254,14 @@ class RXArm(InterbotixManipulatorXS):
 
     def get_naive_waypoints(self, T):
         waypoints_grab = []
-        hover_123 = IK_geometric(T)
-        hover = np.array([hover_123[0], hover_123[1], hover_123[2], 0, 0])
+        # hover_123 = IK_geometric(T)
+        # hover = np.array([hover_123[0], hover_123[1], hover_123[2], np.pi/2, 0])
+        hover = IK_geometric(T)
         waypoints_grab.append(hover.tolist())
-        T[2,3] = T[2,3] - 0.05
-        destination_123 = IK_geometric(T)
-        destination = np.array([destination_123[0], destination_123[1], destination_123[2], 0, 0])
+        T[2,3] = T[2,3] - 0.1
+        # destination_123 = IK_geometric(T)
+        # destination = np.array([destination_123[0], destination_123[1], destination_123[2], np.pi/2, 0])
+        destination = IK_geometric(T)
         waypoints_grab.append(destination.tolist())
         return waypoints_grab
 

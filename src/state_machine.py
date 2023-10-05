@@ -98,6 +98,9 @@ class StateMachine():
         if self.next_state == 'grab':
             self.grab()
 
+        if self.next_state == 'calibrate_depth':
+            self.calibrate_depth()    
+
 
     """Functions run for each state"""
 
@@ -139,6 +142,18 @@ class StateMachine():
         for points in self.waypoints:
             self.rxarm.set_positions(points)
             time.sleep(2)
+
+    def calibrate_depth(self):
+        """!
+        @brief      record the value of the depth slope
+        """
+        self.status_message = "State: Recording depth offset"
+        self.current_state = "calibrate_depth"
+        self.next_state = "idle"
+        if self.camera.depthCalibrated == False:
+            self.camera.offset = self.camera.DepthFrameTrans
+            self.camera.depthCalibrated == True
+            print("depth_calibrated")
 
     def calibrate(self):
         """!
@@ -199,7 +214,7 @@ class StateMachine():
         """
         # print(self.camera.w/1000)
         x,y,z,_ = self.camera.w/1000
-        z = z + 0.05
+        z = z + 0.1
         T = np.eye(4)
         T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
         # T[:3, 3] = np.array([[x], [y], [z]]).reshape(3, 1)

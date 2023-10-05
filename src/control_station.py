@@ -108,6 +108,9 @@ class Gui(QMainWindow):
         self.ui.btnUser8.setText('Start Calibration')
         self.ui.btnUser8.clicked.connect(partial(nxt_if_arm_init, 'calibrate'))
 
+        self.ui.btnUser9.setText('Calibrate Depth')
+        self.ui.btnUser9.clicked.connect(partial(nxt_if_arm_init, 'calibrate_depth'))
+
         self.ui.btnUser12.setText('Clear Waypoints')
         self.ui.btnUser12.clicked.connect(partial(nxt_if_arm_init, 'clear'))
 

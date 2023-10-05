@@ -58,14 +58,23 @@ class Camera():
         self.block_detections = np.array([])
         self.w = None
 
-        rows, cols = 720, 1280
-        depth_map = np.zeros((rows, cols), dtype=np.uint16)
-        depth_range = np.linspace(35, -5, rows)
-        # print(depth_range)
-        for i in range(rows):
-            depth_map[i, :] = depth_range[i]
+        # rows, cols = 720, 1280
+
+        # depth_offset_up_down = np.zeros((rows, cols), dtype=np.uint16)
+        # depth_offset_right_left = np.zeros((rows, cols), dtype=np.uint16)
+        # depth_range_up_down = np.linspace(38, -8, rows)
+        # depth_range_right_left = np.linspace(-10, 10, cols)
+        # # print(depth_range)
+        # for i in range(rows):
+        #     depth_offset_up_down[i, :] = depth_range_up_down[i]
+        # for j in range(cols):
+        #     depth_offset_right_left[:, j] = depth_range_right_left[j]
         
-        self.offset = depth_map
+        # self.offset = depth_offset_up_down + depth_offset_right_left
+
+        self.offset = np.zeros((720,1280)).astype(np.uint16)
+        self.depthCalibrated = False
+
         # print(self.offset)
 
     def processVideoFrame(self):
@@ -224,25 +233,27 @@ class Camera():
         """mask out arm & outside board"""
         depth_data = self.DepthFrameTrans
 
-        depth_data_with_offset = depth_data + self.offset
+        depth_data_with_offset = self.offset - depth_data
+        # print("depth minus offset")
+        # print(self.offset)
         # print("depth_data", depth_data)
 
-        height, width = depth_data.shape
-        y, x = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
+        # height, width = depth_data.shape
+        # y, x = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
 
-        pixel_coordinates = np.vstack((x.ravel(), y.ravel(), np.ones_like(x.ravel())))
-        camera_coordinates = np.dot(np.linalg.inv(self.intrinsic_matrix), pixel_coordinates)
-        camera_coordinates_3d = np.multiply(camera_coordinates, depth_data.ravel())
-        camera_coordinates_3d = camera_coordinates_3d.reshape((3, height, width))
+        # pixel_coordinates = np.vstack((x.ravel(), y.ravel(), np.ones_like(x.ravel())))
+        # camera_coordinates = np.dot(np.linalg.inv(self.intrinsic_matrix), pixel_coordinates)
+        # camera_coordinates_3d = np.multiply(camera_coordinates, depth_data.ravel())
+        # camera_coordinates_3d = camera_coordinates_3d.reshape((3, height, width))
 
-        camera_coordinates_homogeneous = np.vstack((camera_coordinates_3d, np.ones((1, height, width))))
-        world_coordinates_homogeneous = np.dot(self.extrinsic_matrix, camera_coordinates_homogeneous.reshape(4, -1))
-        world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
-        height_map = world_coordinates[2, :, :]
+        # camera_coordinates_homogeneous = np.vstack((camera_coordinates_3d, np.ones((1, height, width))))
+        # world_coordinates_homogeneous = np.dot(self.extrinsic_matrix, camera_coordinates_homogeneous.reshape(4, -1))
+        # world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
+        # height_map = world_coordinates[2, :, :]
 
-        # Apply the height offset to the height_map
-        # print(height_map)
-        height_map_with_offset = height_map + self.offset
+        # # Apply the height offset to the height_map
+        # # print(height_map)
+        # height_map_with_offset = height_map + self.offset
         # print(height_map_with_offset)
 
         # min_height = np.min(height_map_with_offset)
@@ -262,8 +273,9 @@ class Camera():
         cv2.rectangle(mask, (540,385),(741,681), 0, cv2.FILLED)
         cv2.rectangle(image, (150,30),(1129,681), (255, 0, 0), 2)
         cv2.rectangle(image, (540,385),(741,681), (255, 0, 0), 2)
-        lower = 10
-        upper = 1000
+        
+        lower = 15
+        upper = 100
 
         thresh = cv2.bitwise_and(cv2.inRange(depth_data_with_offset, lower, upper), mask)
         # thresh = cv2.bitwise_and(cv2.inRange(height_map_with_offset, lower, upper), mask)
@@ -278,7 +290,7 @@ class Camera():
         filtered_contours = []
         for contour in contours:
             area = cv2.contourArea(contour)
-            if 300 < area < 5000:  # Adjust these values
+            if 100 < area < 5000:  # Adjust these values
                 filtered_contours.append(contour)
 
         # Define block detection criteria based on size or aspect ratio
@@ -289,10 +301,10 @@ class Camera():
                 detected_blocks.append(contour)
 
         # Draw only the detected blocks on the image
-        cv2.drawContours(image, contours, -1, (0, 255, 0), thickness=2)
+        cv2.drawContours(image, detected_blocks, -1, (0, 255, 0), thickness=2)
 
 
-        for contour in contours:
+        for contour in detected_blocks:
             rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
             color = self.retrieve_area_color(rgb_image, contour, colors)
             # area = cv2.contourArea(contour)
@@ -303,7 +315,7 @@ class Camera():
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
-            # print(color, int(theta), cx, cy)
+            print(color, int(theta), cx, cy)
         
         # cv2.imshow("Threshold window", thresh)
         # cv2.imshow("Image window", self.VideoFrame)

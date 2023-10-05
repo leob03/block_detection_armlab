@@ -310,6 +310,8 @@ def IK_geometric(T):
     theta3 = -np.pi/2 + offset - theta3
     # theta2 = t_offset - theta2
     theta2 = np.pi/2 - offset - theta2
+    theta4 = np.pi/2 - theta2 - theta3
+    theta5 = -theta1
 
-    return np.array([theta1, theta2, theta3])
+    return np.array([theta1, theta2, theta3, theta4, theta5])
 
