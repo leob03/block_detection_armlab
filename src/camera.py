@@ -211,6 +211,32 @@ class Camera():
             if d < min_dist[0]:
                 min_dist = (d, label["id"])
         return min_dist[1] 
+
+    def retrieve_area_color(self, data, contour, labels):
+        mask = np.zeros(data.shape[:2], dtype="uint8")
+        cv2.drawContours(mask, [contour], -1, 255, -1)
+        
+        hsv_data = cv2.cvtColor(data, cv2.COLOR_BGR2HSV)  # Convert the input image to HSV color space
+        
+        # Calculate the mean color within the contour
+        mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
+
+        min_dist = (np.inf, None)
+        
+        for label in labels:
+            label_color = label["color"]
+            
+            # Convert the label color to HSV color space
+            label_color_hsv = np.array([[[label_color[0], label_color[1], label_color[2]]]], dtype=np.uint8)
+            label_color_hsv = cv2.cvtColor(label_color_hsv, cv2.COLOR_BGR2HSV)
+            
+            # Calculate the Euclidean distance in HSV space
+            d = np.linalg.norm(label_color_hsv - mean_hsv)
+            
+            if d < min_dist[0]:
+                min_dist = (d, label["id"])
+        
+        return min_dist[1]
     
 
     def detectBlocksInDepthImage(self, image):
@@ -227,22 +253,45 @@ class Camera():
             # {'id': 'green', 'color': (62, 79, 41)},
             # {'id': 'blue', 'color': (93, 53, 0)},
             # {'id': 'violet', 'color': (100, 40, 80)}
-            {'id': 'red', 'color': (63, 53, 128)},
-            {'id': 'red', 'color': (75, 61, 181)},
-            {'id': 'red', 'color': (34, 21, 145)},
-            {'id': 'orange', 'color': (47, 101, 193)},
-            {'id': 'orange', 'color': (30, 62, 138)},
-            {'id': 'yellow', 'color': (44, 155, 184)},
-            {'id': 'yellow', 'color': (54, 187, 214)},
-            {'id': 'yellow', 'color': (28, 198, 231)},
-            {'id': 'green', 'color': (84, 123, 43)},
-            {'id': 'green', 'color': (51, 82, 40)},
-            {'id': 'blue', 'color': (120, 68, 2)},
-            {'id': 'blue', 'color': (108, 46, 0)},
-            {'id': 'blue', 'color': (138, 87, 0)},
-            {'id': 'violet', 'color': (54, 29, 38)},
-            {'id': 'violet', 'color': (112, 66, 51)},
-            {'id': 'pink', 'color': (74, 60, 152)}
+
+            # {'id': 'red', 'color': (63, 53, 128)},
+            # {'id': 'red', 'color': (75, 61, 181)},
+            # {'id': 'red', 'color': (34, 21, 145)},
+            # {'id': 'orange', 'color': (47, 101, 193)},
+            # {'id': 'orange', 'color': (30, 62, 138)},
+            # {'id': 'yellow', 'color': (44, 155, 184)},
+            # {'id': 'yellow', 'color': (54, 187, 214)},
+            # {'id': 'yellow', 'color': (28, 198, 231)},
+            # {'id': 'green', 'color': (84, 123, 43)},
+            # {'id': 'green', 'color': (51, 82, 40)},
+            # {'id': 'blue', 'color': (120, 68, 2)},
+            # {'id': 'blue', 'color': (108, 46, 0)},
+            # {'id': 'blue', 'color': (138, 87, 0)},
+            # {'id': 'violet', 'color': (54, 29, 38)},
+            # {'id': 'violet', 'color': (112, 66, 51)},
+            # {'id': 'pink', 'color': (74, 60, 152)}
+
+            {'id': 'red', 'color': (52, 70, 171)},
+            {'id': 'red', 'color': (54, 87, 190)},
+            {'id': 'red', 'color': (61, 109, 213)},
+            {'id': 'red', 'color': (63, 114, 205)},
+            {'id': 'blue', 'color': (48, 240, 253)},
+            {'id': 'blue', 'color': (46, 234, 255)},
+            {'id': 'blue', 'color': (50, 239, 252)},
+            {'id': 'blue', 'color': (48, 243, 255)},
+            {'id': 'green', 'color': (43, 184, 157)},
+            {'id': 'green', 'color': (50, 172, 144)},
+            {'id': 'orange', 'color': (25, 115, 202)},
+            {'id': 'orange', 'color': (28, 115, 200)},
+            {'id': 'orange', 'color': (50, 144, 247)},
+            {'id': 'yellow', 'color': (31, 142, 214)},
+            # {'id': 'pink', 'color': ()},
+
+            # {'id': 'red', 'color': (0, 255, 255)},
+            # {'id': 'orange', 'color': (30, 255, 255)},
+            # {'id': 'yellow', 'color': (60, 255, 255)},
+            # {'id': 'green', 'color': (90, 255, 255)},
+            # {'id': 'blue', 'color': (120, 255, 255)},
             )
         )
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
@@ -323,8 +372,8 @@ class Camera():
 
         for contour in detected_blocks:
             # rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
-            rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_BGR2RGB)
-            color = self.retrieve_area_color(rgb_image, contour, colors)
+            hsv_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_BGR2HSV)
+            color = self.retrieve_area_color(hsv_image, contour, colors)
             # area = cv2.contourArea(contour)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
