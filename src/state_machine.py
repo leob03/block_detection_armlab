@@ -98,6 +98,9 @@ class StateMachine():
         if self.next_state == 'grab':
             self.grab()
 
+        if self.next_state == 'place':
+            self.place()
+
         if self.next_state == 'calibrate_depth':
             self.calibrate_depth()    
 
@@ -223,6 +226,14 @@ class StateMachine():
         T[2, 3] = z
         # print(T)
         point1, point2 = self.rxarm.get_naive_waypoints(T)
+        # waypoints, success = self.rxarm.get_naive_waypoints(T)
+
+        # if not success:
+        #     self.next_state = "idle"
+        #     return
+        
+        # point1, point2 = waypoints
+
         # print(point1, point2)
         self.rxarm.set_positions(point1)
         time.sleep(2)
@@ -231,6 +242,34 @@ class StateMachine():
         self.rxarm.gripper.grasp()
         time.sleep(0.5)
         self.rxarm.set_positions(point1)
+        self.next_state = "place"
+    
+    def place(self):
+        self.camera.new_click = False
+        while not self.camera.new_click:
+            print("waiting for click")
+        self.camera.new_click = False
+        time.sleep(0.5)
+        x,y,z,_ = self.camera.w/1000
+        z = z + 0.15
+        T = np.eye(4)
+        T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        # T[:3, 3] = np.array([[x], [y], [z]]).reshape(3, 1)
+        T[0, 3] = x
+        T[1, 3] = y
+        T[2, 3] = z
+        # print(T)
+        point1, point2 = self.rxarm.get_naive_waypoints(T)
+        # print(point1, point2)
+        self.rxarm.set_positions(point1)
+        time.sleep(2)
+        self.rxarm.set_positions(point2)
+        time.sleep(2)
+        self.rxarm.gripper.release()
+        time.sleep(0.5)
+        self.rxarm.set_positions(point1)
+
+        self.next_state = "idle"
 
         
     def record_open(self):

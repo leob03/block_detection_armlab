@@ -298,20 +298,49 @@ def IK_geometric(T):
     while (theta1 < -np.pi):
         theta1 += 2*np.pi
 
-
-
     p_wx = p_w[0]
     p_wy = p_w[1]
     p_wz = p_w[2]
     r_w = np.sqrt(p_wx**2 + p_wy**2)
+
+    # if p_wz < 20/1000:
+    #     p_wz = 20/1000
+
     theta3 = -np.arccos((p_wx**2 + p_wy**2 + (p_wz-l1)**2 - l2**2 - l3**2)/(2*l2*l3)) ## or negative
     theta2 = np.arctan2(p_wz-l1, np.sqrt(p_wx**2 + p_wy**2)) - np.arctan2(l3*np.sin(theta3), l2 + l3*np.cos(theta3))
     # theta2 = np.arctan2((l2 + l3*np.cos(theta3))*p_wz - l3*np.sin(theta3)*r_w, (l2 + l3*np.cos(theta3))*r_w + l3*np.sin(theta3)*p_wz)
     theta3 = -np.pi/2 + offset - theta3
     # theta2 = t_offset - theta2
     theta2 = np.pi/2 - offset - theta2
+    theta5 = theta1
     theta4 = np.pi/2 - theta2 - theta3
-    theta5 = -theta1
+
+    # max_wrist_len = 405.73/1000
+    # Wrist Perpendicular
+    # if p_wz <= 50/1000:
+    #     theta4 = np.pi/2 - theta2 - theta3
+    #     if np.sqrt((p_wz + 154.15/1000-103.91/1000)**2 + p_wx**2 + p_wy**2) > max_wrist_len:
+    #         print("Location outside of boundaries.")
+    #         return np.array([])
+
+    # # Wrist Parallel
+    # else:
+    #     theta4 = -theta2 - theta3
+    #     if np.sqrt((np.sqrt(p_wx**2 + p_wy**2) - 154.15/1000)**2 + (p_wz - 103.91/1000)**2) > max_wrist_len:
+    #         print("Location outside of boundaries.")
+    #         return np.array([])
+    #     if (np.sqrt(p_wx**2 + p_wy**2) - 154.15/1000)**2 < 100/1000:
+    #         print("Arm is too close to base.")
+    #         return np.array([])
+
+    # theta3 = -np.arccos((p_wx**2 + p_wy**2 + (p_wz-l1)**2 - l2**2 - l3**2)/(2*l2*l3)) ## or negative
+    # theta2 = np.arctan2(p_wz-l1, np.sqrt(p_wx**2 + p_wy**2)) - np.arctan2(l3*np.sin(theta3), l2 + l3*np.cos(theta3))
+    # # theta2 = np.arctan2((l2 + l3*np.cos(theta3))*p_wz - l3*np.sin(theta3)*r_w, (l2 + l3*np.cos(theta3))*r_w + l3*np.sin(theta3)*p_wz)
+    # theta3 = -np.pi/2 + offset - theta3
+    # # theta2 = t_offset - theta2
+    # theta2 = np.pi/2 - offset - theta2
+    # theta4 = np.pi/2 - theta2 - theta3
+    # theta5 = -theta1
 
     return np.array([theta1, theta2, theta3, theta4, theta5])
 

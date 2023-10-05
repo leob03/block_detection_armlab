@@ -263,6 +263,11 @@ class RXArm(InterbotixManipulatorXS):
         # destination = np.array([destination_123[0], destination_123[1], destination_123[2], np.pi/2, 0])
         destination = IK_geometric(T)
         waypoints_grab.append(destination.tolist())
+
+        # if np.size(hover) == 0 or np.size(destination) == 0:
+        #     return waypoints_grab, False
+        # else:
+        #     return waypoints_grab, True
         return waypoints_grab
 
     @_ensure_initialized
