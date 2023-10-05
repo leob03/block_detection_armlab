@@ -140,6 +140,7 @@ class Gui(QMainWindow):
         self.ArmThread.updateEndEffectorReadout.connect(
             self.updateEndEffectorReadout)
         self.ArmThread.start()
+        # self.w = None
 
     """ Slots attach callback functions to signals emitted from threads"""
 
@@ -280,8 +281,10 @@ class Gui(QMainWindow):
             c = np.matmul(np.linalg.inv(k*1/z),d)
             C = np.array([[c[0]], [c[1]], [c[2]],[1]], dtype=float)
             w = np.matmul(np.linalg.inv(H),C)
-            if self.camera.new_click:
-                self.camera.last_click_3d = w
+            # if self.camera.new_click:
+            #     self.camera.last_click_3d = w
+            #     # self.camera.new_click = False
+            #     print("inside track mouse", w)
 
             self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" %
                                              (w[0], w[1], w[2]))
@@ -297,6 +300,21 @@ class Gui(QMainWindow):
         self.camera.last_click[0] = pt.x()
         self.camera.last_click[1] = pt.y()
         self.camera.new_click = True
+        # print("clicked")
+        ori_pt = cv2.perspectiveTransform(np.array([[[pt.x(), pt.y()]]],dtype=np.float32), np.linalg.inv(self.camera.Homography))
+            # ori_pt = cv2.perspectiveTransform(np.array([[[pt.x(), pt.y()]]],dtype=np.float32), np.eye(3))
+        d = np.array([[round(ori_pt[0][0][0])], [round(ori_pt[0][0][1])], [1.0]], dtype=float)
+        z = self.camera.DepthFrameRaw[round(ori_pt[0][0][1])][round(ori_pt[0][0][0])]
+        self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" %
+                                            (pt.x(), pt.y(), z))
+        H = np.array([[1.0,0.0,0.0,5.0],[0.0,-0.99,0.1225,240.0],[0.0,-0.1225,-0.99,1030.0],[0.0,0.0,0.0,1.0]], dtype=float)
+        if self.camera.cameraCalibrated:
+            H = self.camera.extrinsic_matrix
+        k = np.array([[918.3599853515625, 0.0, 661.1923217773438], [0.0, 919.1538696289062, 356.59722900390625], [0.0, 0.0, 1.0]])
+        c = np.matmul(np.linalg.inv(k*1/z),d)
+        C = np.array([[c[0]], [c[1]], [c[2]],[1]], dtype=float)
+        self.camera.w = np.matmul(np.linalg.inv(H),C)
+        # print(self.camera.w, "inside control station")
         # print(self.camera.last_click)
 
     def initRxarm(self):

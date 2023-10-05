@@ -214,7 +214,8 @@ def to_s_matrix(w, v):
     pass
 
 
-def IK_geometric(dh_params, pose):
+# def IK_geometric(dh_params, pose):
+def IK_geometric(T):
     """!
     @brief      Get all possible joint configs that produce the pose.
 
@@ -228,51 +229,87 @@ def IK_geometric(dh_params, pose):
     @return     All four possible joint configurations in a numpy array 4x4 where each row is one possible joint
                 configuration
     """
-    ## inputs
-    # x, y, z inputs
-    # x =
-    # y =
-    # z = 
+    # ## inputs
+    # # x, y, z inputs
+    # # x =
+    # # y =
+    # # z = 
 
-    # # theta(5), phi(6) inputs
-    # theta = 
-    # phi =
+    # # # theta(5), phi(6) inputs
+    # # theta = 
+    # # phi =
 
-    #Law of Cosines for the displaced link
-    l1 = 200
-    l2 = 50
-    L1 = 205.73
-    L2 = 200
-    z0 = 103.91
-    gamma1 = np.arccos((-l2^2 + l1^2 + L1^2)/(2*l1*L1))
-    gamma2 = np.arccos((-l1^2 + l2^2 + L1^2)/(2*l2*L1))
+    # #Law of Cosines for the displaced link
+    # l1 = 200
+    # l2 = 50
+    # L1 = 205.73
+    # L2 = 200
+    # z0 = 103.91
+    # gamma1 = np.arccos((-l2^2 + l1^2 + L1^2)/(2*l1*L1))
+    # gamma2 = np.arccos((-l1^2 + l2^2 + L1^2)/(2*l2*L1))
 
-    ## Variables common between positions based on inputs
-    # h, K, alpha, and beta are the same across all 4 possibilities
-    h = np.sqrt(x^2 + y^2 + (z - z0)^2)
-    k = np.arctan(z/(np.sqrt(x^2 + y^2)))
-    beta = np.arccos((-h^2 + L1^2 + L2^2)/(2*L1*L2))
-    alpha = np.arccos((-L2^2 + L1^2 + h^2)/(2*L1*h))
+    # ## Variables common between positions based on inputs
+    # # h, K, alpha, and beta are the same across all 4 possibilities
+    # h = np.sqrt(x^2 + y^2 + (z - z0)^2)
+    # k = np.arctan(z/(np.sqrt(x^2 + y^2)))
+    # beta = np.arccos((-h^2 + L1^2 + L2^2)/(2*L1*L2))
+    # alpha = np.arccos((-L2^2 + L1^2 + h^2)/(2*L1*h))
 
-    ## 1 - position of o_c
-    theta1_1 = np.pi + -np.arctan(x/y)
-    theta2_1 = -(np.pi/2 - k + alpha + gamma1)
-    theta3_1 = np.pi - beta - gamma2
+    # ## 1 - position of o_c
+    # theta1_1 = np.pi + -np.arctan(x/y)
+    # theta2_1 = -(np.pi/2 - k + alpha + gamma1)
+    # theta3_1 = np.pi - beta - gamma2
 
-    ## 2 - position of o_c
-    theta1_2 = -np.arctan(x/y)
-    theta2_2 = np.pi/2 - k + alpha - gamma1
-    theta3_2 = np.pi - (beta - gamma2)
+    # ## 2 - position of o_c
+    # theta1_2 = -np.arctan(x/y)
+    # theta2_2 = np.pi/2 - k + alpha - gamma1
+    # theta3_2 = np.pi - (beta - gamma2)
 
-    ## 3 - position of o_c
-    theta1_3 = np.pi + -np.arctan(x/y)
-    theta2_3 = -(np.pi/2 - k - alpha + gamma1)
-    theta3_3 = -(2*np.pi - beta + gamma2)
+    # ## 3 - position of o_c
+    # theta1_3 = np.pi + -np.arctan(x/y)
+    # theta2_3 = -(np.pi/2 - k - alpha + gamma1)
+    # theta3_3 = -(2*np.pi - beta + gamma2)
 
-    ## 4 - position of o_c  
-    theta1_4 = -np.arctan(x/y)
-    theta2_4 = np.pi/2 - gamma1 - alpha - k
-    theta3_4 = -(gamma2 + beta - np.pi)
-    printer = gamma2 + beta
+    # ## 4 - position of o_c  
+    # theta1_4 = -np.arctan(x/y)
+    # theta2_4 = np.pi/2 - gamma1 - alpha - k
+    # theta3_4 = -(gamma2 + beta - np.pi)
+    # printer = gamma2 + beta
 
-    possible_pos = np.array([theta1_1,theta2_1,theta3_1],[theta1_2,theta2_2,theta3_2],[theta1_3,theta2_3,theta3_3],[theta1_4,theta2_4,theta3_4])
+    # possible_pos = np.array([theta1_1,theta2_1,theta3_1],[theta1_2,theta2_2,theta3_2],[theta1_3,theta2_3,theta3_3],[theta1_4,theta2_4,theta3_4])
+
+    l1 = 0.10457               
+    l2 = np.sqrt(0.2**2+0.05**2) 
+    l3 = 0.2                   
+    l4 = 158.575/1000   
+    offset = np.arctan2(0.05, 0.2) 
+
+    p_e = T[0:3, 3]
+    R_e = T[0:3, 0:3]
+    a_e = R_e[0:3, 2]
+
+    p_w = p_e - l4*a_e
+    # p_w = np.array([-0.125, 0.35, 0.152])
+    print(p_w)
+    # theta1 = np.arctan2(p_w[1], p_w[0]) ## + np.pi/2
+    theta1 = np.arctan2(-p_w[0], p_w[1])
+    while (theta1 > np.pi):
+        theta1 -= 2*np.pi
+    while (theta1 < -np.pi):
+        theta1 += 2*np.pi
+
+
+
+    p_wx = p_w[0]
+    p_wy = p_w[1]
+    p_wz = p_w[2]
+    r_w = np.sqrt(p_wx**2 + p_wy**2)
+    theta3 = -np.arccos((p_wx**2 + p_wy**2 + (p_wz-l1)**2 - l2**2 - l3**2)/(2*l2*l3)) ## or negative
+    theta2 = np.arctan2(p_wz-l1, np.sqrt(p_wx**2 + p_wy**2)) - np.arctan2(l3*np.sin(theta3), l2 + l3*np.cos(theta3))
+    # theta2 = np.arctan2((l2 + l3*np.cos(theta3))*p_wz - l3*np.sin(theta3)*r_w, (l2 + l3*np.cos(theta3))*r_w + l3*np.sin(theta3)*p_wz)
+    theta3 = -np.pi/2 + offset - theta3
+    # theta2 = t_offset - theta2
+    theta2 = np.pi/2 - offset - theta2
+
+    return np.array([theta1, theta2, theta3])
+

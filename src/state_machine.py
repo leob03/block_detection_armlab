@@ -117,6 +117,7 @@ class StateMachine():
         if self.camera.new_click:
             self.next_state = "grab"
             self.camera.new_click = False
+            print("next state is grab")
 
     def estop(self):
         """!
@@ -196,7 +197,26 @@ class StateMachine():
         """!
         @brief      Perform the grab of the click and grab
         """
-        x,y,z = self.camera.last_click_3d
+        # print(self.camera.w/1000)
+        x,y,z,_ = self.camera.w/1000
+        z = z + 0.05
+        T = np.eye(4)
+        T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        # T[:3, 3] = np.array([[x], [y], [z]]).reshape(3, 1)
+        T[0, 3] = x
+        T[1, 3] = y
+        T[2, 3] = z
+        # print(T)
+        point1, point2 = self.rxarm.get_naive_waypoints(T)
+        # print(point1, point2)
+        self.rxarm.set_positions(point1)
+        time.sleep(2)
+        self.rxarm.set_positions(point2)
+        time.sleep(2)
+        self.rxarm.gripper.grasp()
+        time.sleep(0.5)
+        self.rxarm.set_positions(point1)
+
         
     def record_open(self):
         self.status_message = "State: Record Waypoints - Recording waypoints"

@@ -56,7 +56,17 @@ class Camera():
         """ block info """
         self.block_contours = np.array([])
         self.block_detections = np.array([])
-        self.last_click_3d = np.array([0, 0, 0], dtype=float)
+        self.w = None
+
+        rows, cols = 720, 1280
+        depth_map = np.zeros((rows, cols), dtype=np.uint16)
+        depth_range = np.linspace(35, -5, rows)
+        # print(depth_range)
+        for i in range(rows):
+            depth_map[i, :] = depth_range[i]
+        
+        self.offset = depth_map
+        # print(self.offset)
 
     def processVideoFrame(self):
         """!
@@ -69,8 +79,8 @@ class Camera():
         """!
         @brief Converts frame to colormaped formats in HSV and RGB
         """
-        # self.DepthFrameHSV[..., 0] = self.DepthFrameRaw >> 1
-        self.DepthFrameHSV[..., 0] = np.right_shift(self.DepthFrameRaw.astype(np.uint16), 1)
+        self.DepthFrameHSV[..., 0] = self.DepthFrameRaw >> 1
+        # self.DepthFrameHSV[..., 0] = np.right_shift(self.DepthFrameRaw.astype(np.uint16), 1)
         self.DepthFrameHSV[..., 1] = 0xFF
         self.DepthFrameHSV[..., 2] = 0x9F
         self.DepthFrameRGB = cv2.cvtColor(self.DepthFrameHSV,
@@ -206,13 +216,15 @@ class Camera():
             {'id': 'orange', 'color': (51, 94, 172)},
             {'id': 'yellow', 'color': (1, 182, 229)},
             {'id': 'green', 'color': (62, 79, 41)},
-            {'id': 'blue', 'color': (93, 53, 0)})
-            # {'id': 'violet', 'color': (100, 40, 80)})
+            {'id': 'blue', 'color': (93, 53, 0)},
+            {'id': 'violet', 'color': (100, 40, 80)})
         )
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
         depth_data = self.DepthFrameTrans
+
+        depth_data_with_offset = depth_data + self.offset
         # print("depth_data", depth_data)
 
         height, width = depth_data.shape
@@ -228,18 +240,10 @@ class Camera():
         world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
         height_map = world_coordinates[2, :, :]
 
-        pitch_degrees = 0 # Adjust as needed
-        roll_degrees = 7.0   # Adjust as needed
-
-        # Calculate the slope in radians
-        pitch_radians = np.radians(pitch_degrees)
-        roll_radians = np.radians(roll_degrees)
-
-        # Calculate the height offset based on the slope
-        height_offset = np.tan(pitch_radians) * world_coordinates[0, :, :] + np.tan(roll_radians) * world_coordinates[1, :, :]
-
         # Apply the height offset to the height_map
-        height_map_with_offset = height_map - height_offset
+        # print(height_map)
+        height_map_with_offset = height_map + self.offset
+        # print(height_map_with_offset)
 
         # min_height = np.min(height_map_with_offset)
         # max_height = np.max(height_map_with_offset)
@@ -252,23 +256,22 @@ class Camera():
         # cv2.imshow("Height Map with Offset", custom_colormap)
         # cv2.waitKey(0)
 
-        # mask = np.zeros_like(depth_data, dtype=np.uint8)
-        mask = np.zeros_like(height_map_with_offset, dtype=np.uint8)
+        mask = np.zeros_like(depth_data_with_offset, dtype=np.uint8)
+        # mask = np.zeros_like(height_map_with_offset, dtype=np.uint8)
         cv2.rectangle(mask, (150,30),(1129,681), 255, cv2.FILLED)
         cv2.rectangle(mask, (540,385),(741,681), 0, cv2.FILLED)
         cv2.rectangle(image, (150,30),(1129,681), (255, 0, 0), 2)
         cv2.rectangle(image, (540,385),(741,681), (255, 0, 0), 2)
-        lower = 0
-        upper = 80
+        lower = 10
+        upper = 1000
 
-        # thresh = cv2.bitwise_and(cv2.inRange(depth_data, lower, upper), mask)
-        thresh = cv2.bitwise_and(cv2.inRange(height_map_with_offset, lower, upper), mask)
+        thresh = cv2.bitwise_and(cv2.inRange(depth_data_with_offset, lower, upper), mask)
+        # thresh = cv2.bitwise_and(cv2.inRange(height_map_with_offset, lower, upper), mask)
 
         # cv2.imshow("Threshold window", thresh)
         # # cv2.imshow("Image window", self.VideoFrame)
         # cv2.waitKey(0)
 
-        # depending on your version of OpenCV, the following line could be:
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # Apply filtering to the contours
@@ -286,10 +289,10 @@ class Camera():
                 detected_blocks.append(contour)
 
         # Draw only the detected blocks on the image
-        cv2.drawContours(image, detected_blocks, -1, (0, 255, 0), thickness=2)
+        cv2.drawContours(image, contours, -1, (0, 255, 0), thickness=2)
 
 
-        for contour in detected_blocks:
+        for contour in contours:
             rgb_image = cv2.cvtColor(self.VideoFrame, cv2.COLOR_RGB2BGR)
             color = self.retrieve_area_color(rgb_image, contour, colors)
             # area = cv2.contourArea(contour)
@@ -300,10 +303,10 @@ class Camera():
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
-            print(color, int(theta), cx, cy)
+            # print(color, int(theta), cx, cy)
         
         # cv2.imshow("Threshold window", thresh)
-        # # cv2.imshow("Image window", self.VideoFrame)
+        # cv2.imshow("Image window", self.VideoFrame)
         # cv2.waitKey(0)
         # k = cv2.waitKey(0)
         # if k == 27:
@@ -474,14 +477,14 @@ class DepthListener(Node):
         except CvBridgeError as e:
             print(e)
         self.camera.DepthFrameRaw = cv_depth
-        # self.camera.DepthFrameRaw = self.camera.DepthFrameRaw / 2
 
         if self.camera.cameraCalibrated:
         
             #substract cv_depth by a slope offset of depth here to obtain cv_depth_with_offset
+            # cv_depth_with_offset = cv_depth #+ self.camera.offset
             # print(cv_depth.dtype, cv_depth.shape)
             self.camera.DepthFrameTrans = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
-            self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
+            # self.camera.DepthFrameRaw = cv2.warpPerspective(cv_depth_with_offset, self.camera.Homography, (cv_depth.shape[1], cv_depth.shape[0]))
         # else:
         #     self.camera.DepthFrameRaw = cv_depth
 
@@ -525,7 +528,6 @@ class VideoThread(QThread):
                 depth_frame = self.camera.convertQtDepthFrame()
                 tag_frame = self.camera.convertQtTagImageFrame()
                 self.camera.projectGridInRGBImage()
-                # self.camera.detectBlocksInDepthImage()
                 grid_frame = self.camera.convertQtGridFrame()
                 if ((rgb_frame != None) & (depth_frame != None)):
                     self.updateFrame.emit(

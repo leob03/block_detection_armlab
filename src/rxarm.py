@@ -14,7 +14,7 @@ You will upgrade some functions and also implement others according to the comme
 import numpy as np
 from scipy.spatial.transform import Rotation
 from functools import partial
-from kinematics import FK_dh, FK_pox, get_pose_from_T
+from kinematics import FK_dh, FK_pox, get_pose_from_T, IK_geometric
 import time
 import csv
 import sys, os
@@ -251,6 +251,17 @@ class RXArm(InterbotixManipulatorXS):
         # phi, theta, psi =  [0.1, 0.1, 0.1]
         return [H[0][3], H[1][3], H[2][3], phi, theta, psi]
         # return [H[0][3], H[1][3], H[2][3], r[0], r[1], r[2]]
+
+    def get_naive_waypoints(self, T):
+        waypoints_grab = []
+        hover_123 = IK_geometric(T)
+        hover = np.array([hover_123[0], hover_123[1], hover_123[2], 0, 0])
+        waypoints_grab.append(hover.tolist())
+        T[2,3] = T[2,3] - 0.05
+        destination_123 = IK_geometric(T)
+        destination = np.array([destination_123[0], destination_123[1], destination_123[2], 0, 0])
+        waypoints_grab.append(destination.tolist())
+        return waypoints_grab
 
     @_ensure_initialized
     def get_wrist_pose(self):
