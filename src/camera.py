@@ -55,8 +55,9 @@ class Camera():
         self.Homography = np.eye(3)
         """ block info """
         self.block_contours = np.array([])
-        self.block_detections = np.array([])
+        self.block_detections = {}
         self.w = None
+        self.block_position_record = False
 
         # rows, cols = 720, 1280
 
@@ -363,12 +364,15 @@ class Camera():
         # Draw only the detected blocks on the image
         cv2.drawContours(image, detected_blocks, -1, (0, 255, 0), thickness=2)
         hsv_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_BGR2HSV)
+        if self.block_position_record:
+            self.block_detections = {}
+
 
         for contour in detected_blocks:
             rgb_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_RGB2BGR)
             hsv_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
             color = self.retrieve_area_color(hsv_image, contour, colors)
-            # area = cv2.contourArea(contour)
+            area = cv2.contourArea(contour)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
             cx = int(M['m10']/(M['m00']+1e-12))
@@ -377,7 +381,16 @@ class Camera():
             # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             print(color, int(theta), cx, cy)
+
+            # Add blocks to the dictionary
+            if self.block_position_record:
+                if self.block_detections.get(color) is not None:
+                    self.block_detections[color].append([cx,cy,theta,area])
+                else:
+                    self.block_detections[color] = [[cx,cy,theta,area]]
         
+        self.block_position_record = False
+        print(self.block_detections)
         # cv2.imshow("Threshold window", thresh)
         # cv2.imshow("Image window", hsv_image)
         # cv2.waitKey(0)

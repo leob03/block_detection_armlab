@@ -102,7 +102,10 @@ class StateMachine():
             self.place()
 
         if self.next_state == 'calibrate_depth':
-            self.calibrate_depth()    
+            self.calibrate_depth()
+
+        if self.next_state == 'task_1':
+            self.task_1()  
 
 
     """Functions run for each state"""
@@ -271,7 +274,13 @@ class StateMachine():
 
         self.next_state = "idle"
 
+    def task_1(self):
+        self.status_message = "State: Perform Task 1 - Performing Task 1"
+        self.current_state = "task_1"
+        self.next_state = "idle"
+        self.camera.block_position_record = True
         
+
     def record_open(self):
         self.status_message = "State: Record Waypoints - Recording waypoints"
         self.current_state = "record"
