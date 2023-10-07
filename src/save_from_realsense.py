@@ -39,7 +39,8 @@ class ImageListener(Node):
         global img_counter
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, data.encoding)
-            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2HSV)
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
         except CvBridgeError as e:
             self.get_logger().info(str(e))
  

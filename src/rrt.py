@@ -43,7 +43,7 @@ class RRT(object):
     Class for RRT Planning
     """
  
-    def __init__(self, joint_angle_start, joint_angle_end, obstacle_list, _joint_limit):
+    def __init__(self, joint_angle_start, joint_angle_end, obstacle_list):
         """
         Setting Parameter
 
@@ -54,7 +54,7 @@ class RRT(object):
         """
         self.start = Node(joint_angle_start * D2R)
         self.end = Node(joint_angle_end * D2R)
-        self.joint_limit = _joint_limit * D2R
+        # self.joint_limit = _joint_limit * D2R
         self.expandDis = 0.2
         self.goalSampleRate = 0.2
         self.maxIter = 500
@@ -69,6 +69,21 @@ class RRT(object):
                               [0.0, 1.0, 0.0, 0.42415],
                               [0.0, 0.0, 1.0, 0.30457],
                               [0.0, 0.0, 0.0, 1.0]])
+        j1_min = -180
+        j1_max = 180
+        j2_min = -108
+        j2_max = 113
+        j3_min = -108
+        j3_max = 93
+        j4_min = -100
+        j4_max = 123
+        j5_min = -180
+        j5_max = 180
+        self.joint_limits = np.array([[j1_min, j1_max],
+                                [j2_min, j2_max],
+                                [j3_min, j3_max],
+                                [j4_min, j4_max],
+                                [j5_min, j5_max]]) * D2R
         # self.path_waitlist = []
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')

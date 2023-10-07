@@ -213,26 +213,6 @@ class Camera():
                 min_dist = (d, label["id"])
         return min_dist[1] 
 
-    # def retrieve_area_color(self, data, contour, labels):
-    #     mask = np.zeros(data.shape[:2], dtype="uint8")
-    #     cv2.drawContours(mask, [contour], -1, 255, -1)    
-    #     # hsv_data = cv2.cvtColor(data, cv2.COLOR_BGR2HSV)  # Convert the input image to HSV color space
-    #     mean_hsv = cv2.mean(data, mask=mask)[:3]
-    #     min_dist = (np.inf, None)
-        
-    #     for label in labels:
-    #         label_color = label["color"]
-    #         # Convert the label color to HSV color space
-    #         label_color_hsv = np.array([[[label_color[0], label_color[1], label_color[2]]]], dtype=np.uint8)
-    #         label_color_hsv = cv2.cvtColor(label_color_hsv, cv2.COLOR_BGR2HSV)
-    #         # Calculate the Euclidean distance in HSV space
-    #         d = np.linalg.norm(label_color_hsv - mean_hsv)
-            
-    #         if d < min_dist[0]:
-    #             min_dist = (d, label["id"])
-        
-    #     return min_dist[1]
-    
 
     def detectBlocksInDepthImage(self, image):
         """!

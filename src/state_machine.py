@@ -8,6 +8,7 @@ import rclpy
 from tkinter import *
 import tkinter.messagebox
 import cv2
+import rrt as motion_planner
 
 class StateMachine():
     """!
@@ -279,6 +280,13 @@ class StateMachine():
         self.current_state = "task_1"
         self.next_state = "idle"
         self.camera.block_position_record = True
+    
+        # obstacle_list = [motion_planner.Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
+        obstacle_list = []
+        start = np.array([0,0,0,0,0])
+        goal = np.array([90,0,0,0,0])
+        rrt = motion_planner.RRT(start, goal, obstacle_list)
+        path = rrt.planning()
         
 
     def record_open(self):
