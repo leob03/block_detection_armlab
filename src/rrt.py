@@ -43,7 +43,7 @@ class RRT(object):
     Class for RRT Planning
     """
  
-    def __init__(self, joint_angle_start, joint_angle_end, obstacle_list):
+    def __init__(self, joint_angle_start, joint_angle_end, obstacle_list, test):
         """
         Setting Parameter
 
@@ -79,14 +79,16 @@ class RRT(object):
         j4_max = 123
         j5_min = -180
         j5_max = 180
-        self.joint_limits = np.array([[j1_min, j1_max],
+        self.joint_limit = np.array([[j1_min, j1_max],
                                 [j2_min, j2_max],
                                 [j3_min, j3_max],
                                 [j4_min, j4_max],
                                 [j5_min, j5_max]]) * D2R
         # self.path_waitlist = []
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.test = test
+        if test:
+            self.fig = plt.figure()
+            self.ax = self.fig.add_subplot(111, projection='3d')
         # self.ax = plt.axes(projection='3d')
  
     def random_node(self):
@@ -99,11 +101,11 @@ class RRT(object):
         return node
     
     def joint_norm(self, node1, node2):
-        return (node1.joint_angle[0] - node2.joint_angle[0]) ** 2 + \
+        return np.sqrt((node1.joint_angle[0] - node2.joint_angle[0]) ** 2 + \
                (node1.joint_angle[1] - node2.joint_angle[1]) ** 2 + \
                (node1.joint_angle[2] - node2.joint_angle[2]) ** 2 + \
                (node1.joint_angle[3] - node2.joint_angle[3]) ** 2 + \
-               (node1.joint_angle[4] - node2.joint_angle[4]) ** 2
+               (node1.joint_angle[4] - node2.joint_angle[4]) ** 2)
  
     def get_nearest_list_index(self, node_list, random_node):
         """
@@ -138,17 +140,18 @@ class RRT(object):
                 node.dis = new_node.dis + self.joint_norm(new_node, node)
  
     def collision_check(self, new_node):
-
+        if len(self.obstacleList) == 0:
+            return False # no collision
         path_point = self.FK_pox(new_node.joint_angle, self.m_mat, self.s_list)
         for obs in self.obstacleList:
             pos = obs.pos
             dz = pos[2] - path_point[2,3]
             if abs(dz) >= obs.h/2:
-                return False
+                continue
             dis = (pos[0] - path_point[0,3])**2 + (pos[1] - path_point[1,3])**2
-            if dis >= obs.r**2:
-                return False
-        return True  # safe
+            if dis <= obs.r**2:
+                return True # collision
+        return False  # no collision
  
     def planning(self):
         """
@@ -190,20 +193,31 @@ class RRT(object):
             if distance <= self.expandDis:
                 print("Goal!!")
                 break
-
-        path_point = self.FK_pox(self.end.joint_angle, self.m_mat, self.s_list)
-        path = [path_point[:3, 3]]
+        
+        if self.test:
+            path_point = self.FK_pox(self.end.joint_angle, self.m_mat, self.s_list)
+            path = [path_point[:3, 3]]
+            last_index = len(self.nodeList) - 1
+            while self.nodeList[last_index].parent is not None:
+                node = self.nodeList[last_index]
+                path_point = self.FK_pox(node.joint_angle, self.m_mat, self.s_list)
+                path.append(path_point[:3, 3])
+                last_index = node.parent
+            path_point = self.FK_pox(self.start.joint_angle, self.m_mat, self.s_list)
+            path.append(path_point[:3, 3])
+            path = path[::-1]
+            return path
+        
+        path = [self.end.joint_angle]
         last_index = len(self.nodeList) - 1
         while self.nodeList[last_index].parent is not None:
             node = self.nodeList[last_index]
-            path_point = self.FK_pox(node.joint_angle, self.m_mat, self.s_list)
-            path.append(path_point[:3, 3])
+            path.append(node.joint_angle)
             last_index = node.parent
-        path_point = self.FK_pox(self.start.joint_angle, self.m_mat, self.s_list)
-        path.append(path_point[:3, 3])
-        path = path[::-1]
+        path.append(self.start.joint_angle)
         return path
- 
+    
+    
     # def generate_cylinder(self):
     #     for obs in self.obstacleList:
     #         z = np.linspace(obs.pos[2]-obs.h/2, obs.pos[2]+obs.h/2, 50)
@@ -465,30 +479,15 @@ class RRT(object):
 def main():
     print("start RRT path planning")
 
-    j1_min = -180
-    j1_max = 180
-    j2_min = -108
-    j2_max = 113
-    j3_min = -108
-    j3_max = 93
-    j4_min = -100
-    j4_max = 123
-    j5_min = -180
-    j5_max = 180
-    joint_limits = np.array([[j1_min, j1_max],
-                            [j2_min, j2_max],
-                            [j3_min, j3_max],
-                            [j4_min, j4_max],
-                            [j5_min, j5_max]])
-
- 
     obstacle_list = [Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
     # obstacle_list = []
  
     # Set Initial parameters
     start = np.array([0,0,0,0,0])
-    goal = np.array([90,-60,100,90,0])
-    rrt = RRT(start, goal, obstacle_list, joint_limits)
+    # goal = np.array([90,-60,100,90,0])
+    goal = np.array([90, 0, 0, 0, 0])
+    test = True
+    rrt = RRT(start, goal, obstacle_list, test)
 
     path = rrt.planning()
     # print(path)

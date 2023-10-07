@@ -202,16 +202,35 @@ class Camera():
         """
         pass
     
-    def retrieve_area_color(self, data, contour, labels):
-        mask = np.zeros(data.shape[:2], dtype="uint8")
+    # def retrieve_area_color(self, data, contour, labels):
+    #     mask = np.zeros(data.shape[:2], dtype="uint8")
+    #     cv2.drawContours(mask, [contour], -1, 255, -1)
+    #     mean = cv2.mean(data, mask=mask)[:3]
+    #     min_dist = (np.inf, None)
+    #     for label in labels:
+    #         d = np.linalg.norm(label["color"] - np.array(mean))
+    #         if d < min_dist[0]:
+    #             min_dist = (d, label["id"])
+    #     return min_dist[1] 
+
+    def retrieve_area_color(self, hsv_data, contour, labels):
+        mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
         cv2.drawContours(mask, [contour], -1, 255, -1)
-        mean = cv2.mean(data, mask=mask)[:3]
+        mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
+        
+        # Convert the mean hue value to an integer
+        mean_hue = int(mean_hsv[0])
+        
         min_dist = (np.inf, None)
         for label in labels:
-            d = np.linalg.norm(label["color"] - np.array(mean))
-            if d < min_dist[0]:
-                min_dist = (d, label["id"])
-        return min_dist[1] 
+            h_range = label["h_range"]
+            
+            h_within_range = h_range[0] <= mean_hue <= h_range[1]
+            
+            if h_within_range:
+                return label["id"]
+        
+        return None
 
 
     def detectBlocksInDepthImage(self, image):
@@ -221,92 +240,68 @@ class Camera():
                     TODO: Implement a blob detector to find blocks in the depth image
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
-        colors = list((
-            # {'id': 'red', 'color': (51, 38, 135)},
-            # {'id': 'orange', 'color': (51, 94, 172)},
-            # {'id': 'yellow', 'color': (1, 182, 229)},
-            # {'id': 'green', 'color': (62, 79, 41)},
-            # {'id': 'blue', 'color': (93, 53, 0)},
-            # {'id': 'violet', 'color': (100, 40, 80)}
+        # colors = list((
+        #     # {'id': 'red', 'color': (51, 38, 135)},
+        #     # {'id': 'orange', 'color': (51, 94, 172)},
+        #     # {'id': 'yellow', 'color': (1, 182, 229)},
+        #     # {'id': 'green', 'color': (62, 79, 41)},
+        #     # {'id': 'blue', 'color': (93, 53, 0)},
+        #     # {'id': 'violet', 'color': (100, 40, 80)}
 
-            # {'id': 'red', 'color': (63, 53, 128)},
-            # {'id': 'red', 'color': (75, 61, 181)},
-            # {'id': 'red', 'color': (34, 21, 145)},
-            # {'id': 'orange', 'color': (47, 101, 193)},
-            # {'id': 'orange', 'color': (30, 62, 138)},
-            # {'id': 'yellow', 'color': (44, 155, 184)},
-            # {'id': 'yellow', 'color': (54, 187, 214)},
-            # {'id': 'yellow', 'color': (28, 198, 231)},
-            # {'id': 'green', 'color': (84, 123, 43)},
-            # {'id': 'green', 'color': (51, 82, 40)},
-            # {'id': 'blue', 'color': (120, 68, 2)},
-            # {'id': 'blue', 'color': (108, 46, 0)},
-            # {'id': 'blue', 'color': (138, 87, 0)},
-            # {'id': 'violet', 'color': (54, 29, 38)},
-            # {'id': 'violet', 'color': (112, 66, 51)},
-            # {'id': 'pink', 'color': (74, 60, 152)}
+        #     # {'id': 'red', 'color': (63, 53, 128)},
+        #     # {'id': 'red', 'color': (75, 61, 181)},
+        #     # {'id': 'red', 'color': (34, 21, 145)},
+        #     # {'id': 'orange', 'color': (47, 101, 193)},
+        #     # {'id': 'orange', 'color': (30, 62, 138)},
+        #     # {'id': 'yellow', 'color': (44, 155, 184)},
+        #     # {'id': 'yellow', 'color': (54, 187, 214)},
+        #     # {'id': 'yellow', 'color': (28, 198, 231)},
+        #     # {'id': 'green', 'color': (84, 123, 43)},
+        #     # {'id': 'green', 'color': (51, 82, 40)},
+        #     # {'id': 'blue', 'color': (120, 68, 2)},
+        #     # {'id': 'blue', 'color': (108, 46, 0)},
+        #     # {'id': 'blue', 'color': (138, 87, 0)},
+        #     # {'id': 'violet', 'color': (54, 29, 38)},
+        #     # {'id': 'violet', 'color': (112, 66, 51)},
+        #     # {'id': 'pink', 'color': (74, 60, 152)}
 
-            {'id': 'red', 'color': (52, 70, 171)},
-            {'id': 'red', 'color': (54, 87, 190)},
-            {'id': 'red', 'color': (61, 109, 213)},
-            {'id': 'red', 'color': (63, 114, 205)},
-            {'id': 'blue', 'color': (48, 240, 253)},
-            {'id': 'blue', 'color': (46, 234, 255)},
-            {'id': 'blue', 'color': (50, 239, 252)},
-            {'id': 'blue', 'color': (48, 243, 255)},
-            {'id': 'green', 'color': (43, 184, 157)},
-            {'id': 'green', 'color': (50, 172, 144)},
-            {'id': 'orange', 'color': (25, 115, 202)},
-            {'id': 'orange', 'color': (28, 115, 200)},
-            {'id': 'orange', 'color': (50, 144, 247)},
-            {'id': 'yellow', 'color': (31, 142, 214)},
-            # {'id': 'pink', 'color': ()},
+        #     {'id': 'red', 'color': (52, 70, 171)},
+        #     {'id': 'red', 'color': (54, 87, 190)},
+        #     {'id': 'red', 'color': (61, 109, 213)},
+        #     {'id': 'red', 'color': (63, 114, 205)},
+        #     {'id': 'blue', 'color': (48, 240, 253)},
+        #     {'id': 'blue', 'color': (46, 234, 255)},
+        #     {'id': 'blue', 'color': (50, 239, 252)},
+        #     {'id': 'blue', 'color': (48, 243, 255)},
+        #     {'id': 'green', 'color': (43, 184, 157)},
+        #     {'id': 'green', 'color': (50, 172, 144)},
+        #     {'id': 'orange', 'color': (25, 115, 202)},
+        #     {'id': 'orange', 'color': (28, 115, 200)},
+        #     {'id': 'orange', 'color': (50, 144, 247)},
+        #     {'id': 'yellow', 'color': (31, 142, 214)},
+        #     # {'id': 'pink', 'color': ()},
 
-            # {'id': 'red', 'color': (0, 255, 255)},
-            # {'id': 'orange', 'color': (30, 255, 255)},
-            # {'id': 'yellow', 'color': (60, 255, 255)},
-            # {'id': 'green', 'color': (90, 255, 255)},
-            # {'id': 'blue', 'color': (120, 255, 255)},
-            )
-        )
+        #     # {'id': 'red', 'color': (0, 255, 255)},
+        #     # {'id': 'orange', 'color': (30, 255, 255)},
+        #     # {'id': 'yellow', 'color': (60, 255, 255)},
+        #     # {'id': 'green', 'color': (90, 255, 255)},
+        #     # {'id': 'blue', 'color': (120, 255, 255)},
+        #     )
+        # )
+        colors = [
+            {'id': 'red', 'h_range': (118, 180)},
+            {'id': 'orange', 'h_range': (0, 21)},
+            {'id': 'blue', 'h_range': (81, 94)},
+            {'id': 'green', 'h_range': (35, 80)},
+            {'id': 'yellow', 'h_range': (22, 34)},
+            {'id': 'purple', 'h_range': (95, 117)}
+        ]
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
         depth_data = self.DepthFrameTrans
 
         depth_data_with_offset = self.offset - depth_data
-        # print("depth minus offset")
-        # print(self.offset)
-        # print("depth_data", depth_data)
-
-        # height, width = depth_data.shape
-        # y, x = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
-
-        # pixel_coordinates = np.vstack((x.ravel(), y.ravel(), np.ones_like(x.ravel())))
-        # camera_coordinates = np.dot(np.linalg.inv(self.intrinsic_matrix), pixel_coordinates)
-        # camera_coordinates_3d = np.multiply(camera_coordinates, depth_data.ravel())
-        # camera_coordinates_3d = camera_coordinates_3d.reshape((3, height, width))
-
-        # camera_coordinates_homogeneous = np.vstack((camera_coordinates_3d, np.ones((1, height, width))))
-        # world_coordinates_homogeneous = np.dot(self.extrinsic_matrix, camera_coordinates_homogeneous.reshape(4, -1))
-        # world_coordinates = world_coordinates_homogeneous[:3, :].reshape(3, height, width)
-        # height_map = world_coordinates[2, :, :]
-
-        # # Apply the height offset to the height_map
-        # # print(height_map)
-        # height_map_with_offset = height_map + self.offset
-        # print(height_map_with_offset)
-
-        # min_height = np.min(height_map_with_offset)
-        # max_height = np.max(height_map_with_offset)
-        # normalized_height_map = (height_map_with_offset - min_height) / (max_height - min_height)
-
-        # # Create a custom colormap (you can define your own color scheme)
-        # # Here, we create a simple gradient from blue to red
-        # custom_colormap = cv2.applyColorMap((normalized_height_map * 255).astype(np.uint8), cv2.COLORMAP_JET)
-
-        # cv2.imshow("Height Map with Offset", custom_colormap)
-        # cv2.waitKey(0)
 
         mask = np.zeros_like(depth_data_with_offset, dtype=np.uint8)
         # mask = np.zeros_like(height_map_with_offset, dtype=np.uint8)
@@ -360,7 +355,7 @@ class Camera():
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
-            print(color, int(theta), cx, cy)
+            # print(color, int(theta), cx, cy)
 
             # Add blocks to the dictionary
             if self.block_position_record:
@@ -370,7 +365,7 @@ class Camera():
                     self.block_detections[color] = [[cx,cy,theta,area]]
         
         self.block_position_record = False
-        print(self.block_detections)
+        # print(self.block_detections)
         # cv2.imshow("Threshold window", thresh)
         # cv2.imshow("Image window", hsv_image)
         # cv2.waitKey(0)

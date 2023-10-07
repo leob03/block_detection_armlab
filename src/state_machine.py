@@ -16,7 +16,6 @@ class StateMachine():
 
                 TODO: Add states and state functions to this class to implement all of the required logic for the armlab
     """
-
     def __init__(self, rxarm, camera):
         """!
         @brief      Constructs a new instance.
@@ -44,6 +43,7 @@ class StateMachine():
             [0.0, 0.0, 0.0, 0.0, 0.0]]
         
         self.recorded_waypoints = []
+        self.holding = False
 
     def set_next_state(self, state):
         """!
@@ -124,10 +124,13 @@ class StateMachine():
         """
         self.status_message = "State: Idle - Waiting for input"
         self.current_state = "idle"
-        if self.camera.new_click:
+        if self.camera.new_click and self.holding == False:
             self.next_state = "grab"
             self.camera.new_click = False
             print("next state is grab")
+        elif self.camera.new_click and self.holding == True:
+            self.next_state = "place"
+            self.camera.new_click = False
 
     def estop(self):
         """!
@@ -221,6 +224,14 @@ class StateMachine():
         """
         # print(self.camera.w/1000)
         x,y,z,_ = self.camera.w/1000
+        print(type(x),type(y),type(z))        
+        print(x,y,z)
+
+        if x == "nan" or y == "nan" or z == "nan":
+            print("\n-----------One of the coordinates are NAN-------------\n")
+            self.next_state = "idle"
+            return
+
         z = z + 0.1
         T = np.eye(4)
         T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
@@ -230,28 +241,36 @@ class StateMachine():
         T[2, 3] = z
         # print(T)
         point1, point2 = self.rxarm.get_naive_waypoints(T)
-        # waypoints, success = self.rxarm.get_naive_waypoints(T)
 
-        # if not success:
-        #     self.next_state = "idle"
-        #     return
-        
-        # point1, point2 = waypoints
 
-        # print(point1, point2)
-        self.rxarm.set_positions(point1)
-        time.sleep(2)
-        self.rxarm.set_positions(point2)
-        time.sleep(2)
-        self.rxarm.gripper.grasp()
-        time.sleep(0.5)
-        self.rxarm.set_positions(point1)
-        self.next_state = "place"
+        if point1 == np.array([]) or point2 == np.array([]):
+            self.holding = False
+        else:
+            self.holding = True
+            # waypoints, success = self.rxarm.get_naive_waypoints(T)
+
+            # if not success:
+            #     self.next_state = "idle"
+            #     return
+            
+            # point1, point2 = waypoints
+
+            # print(point1, point2)
+            self.rxarm.gripper.release()
+            time.sleep(0.5)
+            self.rxarm.set_positions(point1)
+            time.sleep(2)
+            self.rxarm.set_positions(point2)
+            time.sleep(2)
+            self.rxarm.gripper.grasp()
+            time.sleep(0.5)
+            self.rxarm.set_positions(point1)
+        self.next_state = "idle"
     
     def place(self):
         self.camera.new_click = False
-        while not self.camera.new_click:
-            print("waiting for click")
+        # while not self.camera.new_click:
+            # print("waiting for click")
         self.camera.new_click = False
         time.sleep(0.5)
         x,y,z,_ = self.camera.w/1000
@@ -272,7 +291,7 @@ class StateMachine():
         self.rxarm.gripper.release()
         time.sleep(0.5)
         self.rxarm.set_positions(point1)
-
+        self.holding = False
         self.next_state = "idle"
 
     def task_1(self):
@@ -285,8 +304,9 @@ class StateMachine():
         obstacle_list = []
         start = np.array([0,0,0,0,0])
         goal = np.array([90,0,0,0,0])
-        rrt = motion_planner.RRT(start, goal, obstacle_list)
+        rrt = motion_planner.RRT(start, goal, obstacle_list, False)
         path = rrt.planning()
+        print(path)
         
 
     def record_open(self):
