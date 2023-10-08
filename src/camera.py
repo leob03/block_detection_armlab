@@ -201,6 +201,24 @@ class Camera():
                     locations in self.block_detections
         """
         pass
+
+    def uv2xyz_single(self, u, v):
+        """!
+        @brief      Convert u,v to x,y,z
+                    return w 4x1 np.array
+
+        """
+        ori_pt = cv2.perspectiveTransform(np.array([[[u, v]]],dtype=np.float32), np.linalg.inv(self.Homography))
+        d = np.array([[round(ori_pt[0][0][0])], [round(ori_pt[0][0][1])], [1.0]], dtype=float)
+        z = self.DepthFrameRaw[round(ori_pt[0][0][1])][round(ori_pt[0][0][0])]
+        H = np.array([[1.0,0.0,0.0,5.0],[0.0,-0.99,0.1225,240.0],[0.0,-0.1225,-0.99,1030.0],[0.0,0.0,0.0,1.0]], dtype=float)
+        if self.cameraCalibrated:
+            H = self.extrinsic_matrix
+        k = np.array([[918.3599853515625, 0.0, 661.1923217773438], [0.0, 919.1538696289062, 356.59722900390625], [0.0, 0.0, 1.0]])
+        c = np.matmul(np.linalg.inv(k*1/z),d)
+        C = np.array([[c[0]], [c[1]], [c[2]],[1]], dtype=float)
+        w = np.matmul(np.linalg.inv(H),C)
+        return w
     
     # def retrieve_area_color(self, data, contour, labels):
     #     mask = np.zeros(data.shape[:2], dtype="uint8")
@@ -231,7 +249,6 @@ class Camera():
                 return label["id"]
         
         return None
-
 
     def detectBlocksInDepthImage(self, image):
         """!
@@ -359,10 +376,11 @@ class Camera():
 
             # Add blocks to the dictionary
             if self.block_position_record:
+                pos = self.uv2xyz_single(cx, cy)
                 if self.block_detections.get(color) is not None:
-                    self.block_detections[color].append([cx,cy,theta,area])
+                    self.block_detections[color].append([pos,theta,area])
                 else:
-                    self.block_detections[color] = [[cx,cy,theta,area]]
+                    self.block_detections[color] = [[pos,theta,area]]
         
         self.block_position_record = False
         # print(self.block_detections)

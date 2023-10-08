@@ -479,7 +479,8 @@ class RRT(object):
 def main():
     print("start RRT path planning")
 
-    obstacle_list = [Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
+    # obstacle_list = [Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
+    obstacle_list = [Obstacle((0, 0, -0.2), _r=2, _h=0.4)]
     # obstacle_list = []
  
     # Set Initial parameters

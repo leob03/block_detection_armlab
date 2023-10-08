@@ -269,6 +269,9 @@ class RXArm(InterbotixManipulatorXS):
         # else:
         #     return waypoints_grab, True
         return waypoints_grab
+    
+    def get_inverse(self, T):
+        return IK_geometric(T).tolist()
 
     @_ensure_initialized
     def get_wrist_pose(self):

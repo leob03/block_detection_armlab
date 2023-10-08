@@ -299,14 +299,28 @@ class StateMachine():
         self.current_state = "task_1"
         self.next_state = "idle"
         self.camera.block_position_record = True
-    
-        # obstacle_list = [motion_planner.Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
-        obstacle_list = []
+        time.sleep(2)
+        obstacle_list = [motion_planner.Obstacle((0, 0, -0.2), _r=2, _h=0.42),
+                         motion_planner.Obstacle((0.25, 0.125, 0.31/2), _r=0.04, _h=0.17531)]
+        # obstacle_list = []
         start = np.array([0,0,0,0,0])
-        goal = np.array([90,0,0,0,0])
+        # goal = np.array([90,0,0,0,0])
+        block = self.camera.block_detections['red'][0]
+        T = np.eye(4)
+        T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        # T[:3, 3] = np.array([[x], [y], [z]]).reshape(3, 1)
+        T[0, 3] = block[0][0]/1000
+        T[1, 3] = block[0][1]/1000
+        T[2, 3] = block[0][2]/1000
+        # point1, point2 = self.rxarm.get_naive_waypoints(T)
+        point = self.rxarm.get_inverse(T)
+        goal = np.array(point)*180/np.pi
         rrt = motion_planner.RRT(start, goal, obstacle_list, False)
         path = rrt.planning()
         print(path)
+        for i in range(len(path)-1,-1,-1):
+            self.rxarm.set_positions(path[i].tolist())
+            time.sleep(0.5)
         
 
     def record_open(self):

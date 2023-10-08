@@ -310,8 +310,8 @@ class Gui(QMainWindow):
             # ori_pt = cv2.perspectiveTransform(np.array([[[pt.x(), pt.y()]]],dtype=np.float32), np.eye(3))
         d = np.array([[round(ori_pt[0][0][0])], [round(ori_pt[0][0][1])], [1.0]], dtype=float)
         z = self.camera.DepthFrameRaw[round(ori_pt[0][0][1])][round(ori_pt[0][0][0])]
-        self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" %
-                                            (pt.x(), pt.y(), z))
+        # self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" %
+        #                                     (pt.x(), pt.y(), z))
         H = np.array([[1.0,0.0,0.0,5.0],[0.0,-0.99,0.1225,240.0],[0.0,-0.1225,-0.99,1030.0],[0.0,0.0,0.0,1.0]], dtype=float)
         if self.camera.cameraCalibrated:
             H = self.camera.extrinsic_matrix
