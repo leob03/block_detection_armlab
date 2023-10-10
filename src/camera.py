@@ -17,6 +17,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo
 from apriltag_msgs.msg import *
 from cv_bridge import CvBridge, CvBridgeError
+from scipy import stats 
 
 
 class Camera():
@@ -222,47 +223,35 @@ class Camera():
     
 
 
-    # def retrieve_area_color(self, hsv_data, contour, labels):
-    #     mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
-    #     cv2.drawContours(mask, [contour], -1, 255, -1)
-    #     mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
-        
-    #     # Convert the mean hue value to an integer
-    #     mean_hue = int(mean_hsv[0])
-        
-    #     min_dist = (np.inf, None)
-    #     for label in labels:
-    #         h_range = label["h_range"]
-            
-    #         h_within_range = h_range[0] <= mean_hue <= h_range[1]
-            
-    #         if h_within_range:
-    #             return label["id"]
-        
-    #     return None
-
     def retrieve_area_color(self, hsv_data, contour, labels):
         mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
         cv2.drawContours(mask, [contour], -1, 255, -1)
-        mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
+        # mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
+        # mean_hsv = stats.mode(hsv_data, mask=mask)[:3]
         
-        # Convert the mean HSV values to integers
-        mean_hsv = (int(mean_hsv[0]), int(mean_hsv[1]), int(mean_hsv[2]))
+        # # Convert the mean hue value to an integer
+        # mean_hue = int(mean_hsv[0])
+
+        hue_channel = hsv_data[:, :, 0]  # Assuming hue is in the first channel (0)
+
+        # Apply the mask to the hue channel
+        hue_channel_masked = hue_channel[mask > 0]
+
+        # Compute the mode of the hue values within the masked region
+        mode_hue = int(stats.mode(hue_channel_masked).mode)
+
+        median_hue = int(np.median(hue_channel_masked))
         
         min_dist = (np.inf, None)
         for label in labels:
             h_range = label["h_range"]
-            s_range = label["s_range"]
-            v_range = label["v_range"]
             
-            h_within_range = h_range[0] <= mean_hsv[0] <= h_range[1]
-            s_within_range = s_range[0] <= mean_hsv[1] <= s_range[1]
-            v_within_range = v_range[0] <= mean_hsv[2] <= v_range[1]
+            h_within_range = h_range[0] <= median_hue <= h_range[1]
             
-            if h_within_range and s_within_range and v_within_range:
-                return label["id"]
+            if h_within_range:
+                return label["id"], mode_hue
         
-        return None
+        return None, None
 
 
     def detectBlocksInDepthImage(self, image):
@@ -273,14 +262,25 @@ class Camera():
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
 
+        # colors = [
+        #     {'id': 'red', 'h_range': (111, 180)},
+        #     {'id': 'orange', 'h_range': (0, 24)},
+        #     {'id': 'blue', 'h_range': (70, 91)},
+        #     {'id': 'green', 'h_range': (33, 69)},
+        #     {'id': 'yellow', 'h_range': (25, 32)},
+        #     {'id': 'purple', 'h_range': (92, 110)}
+        # ]
+
         colors = [
-            {'id': 'red', 'h_range': (162, 180), 's_range': (140, 255), 'v_range': (91, 255)},
-            {'id': 'orange', 'h_range': (0, 15), 's_range': (140, 255), 'v_range': (91, 255)},
-            {'id': 'blue', 'h_range': (96, 106), 's_range': (140, 255), 'v_range': (91, 255)},
-            {'id': 'green', 'h_range': (35, 80), 's_range': (140, 255), 'v_range': (91, 255)},
-            {'id': 'yellow', 'h_range': (16, 31), 's_range': (140, 255), 'v_range': (91, 255)},
-            {'id': 'purple', 'h_range': (107, 152), 's_range': (54, 255), 'v_range': (77, 255)}
+            {'id': 'red', 'h_range': (0, 2)},
+            {'id': 'red', 'h_range': (162, 180)},
+            {'id': 'orange', 'h_range': (3, 15)},
+            {'id': 'blue', 'h_range': (96, 107)},
+            {'id': 'green', 'h_range': (35, 80)},
+            {'id': 'yellow', 'h_range': (16, 31)},
+            {'id': 'purple', 'h_range': (108, 152)}
         ]
+
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)
         """mask out arm & outside board"""
@@ -330,7 +330,7 @@ class Camera():
         for contour in detected_blocks:
             rgb_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_RGB2BGR)
             hsv_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
-            color = self.retrieve_area_color(hsv_image, contour, colors)
+            color, h = self.retrieve_area_color(hsv_image, contour, colors)
             area = cv2.contourArea(contour)
             theta = cv2.minAreaRect(contour)[2]
             M = cv2.moments(contour)
@@ -338,7 +338,9 @@ class Camera():
             cy = int(M['m01']/(M['m00']+1e-12))
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
             # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
-            cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
+            # cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
+            if h is not None:
+                cv2.putText(image, str(int(h)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             # print(color, int(theta), cx, cy)
 
             # Add blocks to the dictionary
