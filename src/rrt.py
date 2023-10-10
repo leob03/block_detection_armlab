@@ -228,7 +228,7 @@ class RRT(object):
             # new_node.parent = new_parent
             # new_node.dis = self.nodeList[new_parent].dis+self.expandDis
             # self.nodeList.append(new_node)
-            self.add_and_adjust_tree(new_node, 1.1)
+            self.add_and_adjust_tree(new_node, 1.5)
 
             # check goal
             distance = self.joint_norm(new_node, self.end)
@@ -577,7 +577,7 @@ def main():
     # obstacle_list = [# Obstacle(np.array([0, 0, -0.2]), _r=2, _h=0.2),
     #                  Obstacle(np.array([0.25, 0.075, 0]), _r=0.03, _h=0.4)]
     obstacle_list = [Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),
-                     Obstacle(np.array([0.35, -0.075, 0]), _r=0.03, _h=0.16),]
+                     Obstacle(np.array([ -0.075,0.35, 0]), _r=0.03, _h=0.16),]
     # obstacle_list = []
  
     # Set Initial parameters

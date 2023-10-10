@@ -222,24 +222,48 @@ class Camera():
     
 
 
+    # def retrieve_area_color(self, hsv_data, contour, labels):
+    #     mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
+    #     cv2.drawContours(mask, [contour], -1, 255, -1)
+    #     mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
+        
+    #     # Convert the mean hue value to an integer
+    #     mean_hue = int(mean_hsv[0])
+        
+    #     min_dist = (np.inf, None)
+    #     for label in labels:
+    #         h_range = label["h_range"]
+            
+    #         h_within_range = h_range[0] <= mean_hue <= h_range[1]
+            
+    #         if h_within_range:
+    #             return label["id"]
+        
+    #     return None
+
     def retrieve_area_color(self, hsv_data, contour, labels):
         mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
         cv2.drawContours(mask, [contour], -1, 255, -1)
         mean_hsv = cv2.mean(hsv_data, mask=mask)[:3]
         
-        # Convert the mean hue value to an integer
-        mean_hue = int(mean_hsv[0])
+        # Convert the mean HSV values to integers
+        mean_hsv = (int(mean_hsv[0]), int(mean_hsv[1]), int(mean_hsv[2]))
         
         min_dist = (np.inf, None)
         for label in labels:
             h_range = label["h_range"]
+            s_range = label["s_range"]
+            v_range = label["v_range"]
             
-            h_within_range = h_range[0] <= mean_hue <= h_range[1]
+            h_within_range = h_range[0] <= mean_hsv[0] <= h_range[1]
+            s_within_range = s_range[0] <= mean_hsv[1] <= s_range[1]
+            v_within_range = v_range[0] <= mean_hsv[2] <= v_range[1]
             
-            if h_within_range:
+            if h_within_range and s_within_range and v_within_range:
                 return label["id"]
         
         return None
+
 
     def detectBlocksInDepthImage(self, image):
         """!
@@ -250,12 +274,12 @@ class Camera():
         font = cv2.FONT_HERSHEY_SIMPLEX
 
         colors = [
-            {'id': 'red', 'h_range': (118, 180)},
-            {'id': 'orange', 'h_range': (0, 21)},
-            {'id': 'blue', 'h_range': (81, 94)},
-            {'id': 'green', 'h_range': (35, 80)},
-            {'id': 'yellow', 'h_range': (22, 34)},
-            {'id': 'purple', 'h_range': (95, 117)}
+            {'id': 'red', 'h_range': (162, 180), 's_range': (140, 255), 'v_range': (91, 255)},
+            {'id': 'orange', 'h_range': (0, 15), 's_range': (140, 255), 'v_range': (91, 255)},
+            {'id': 'blue', 'h_range': (96, 106), 's_range': (140, 255), 'v_range': (91, 255)},
+            {'id': 'green', 'h_range': (35, 80), 's_range': (140, 255), 'v_range': (91, 255)},
+            {'id': 'yellow', 'h_range': (16, 31), 's_range': (140, 255), 'v_range': (91, 255)},
+            {'id': 'purple', 'h_range': (107, 152), 's_range': (54, 255), 'v_range': (77, 255)}
         ]
         # cv2.namedWindow("Image window", cv2.WINDOW_NORMAL)
         #cv2.namedWindow("Threshold window", cv2.WINDOW_NORMAL)

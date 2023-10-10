@@ -86,7 +86,7 @@ class Gui(QMainWindow):
         self.ui.btn_torq_on.clicked.connect(lambda: self.rxarm.enable_torque())
         self.ui.btn_sleep_arm.clicked.connect(lambda: self.rxarm.sleep())
         self.ui.btn_task1.clicked.connect(partial(nxt_if_arm_init, 'task_1'))
-        self.ui.btn_task1.clicked.connect(partial(nxt_if_arm_init, 'task_2'))
+        self.ui.btn_task2.clicked.connect(partial(nxt_if_arm_init, 'task_2'))
 
 
         #User Buttons
@@ -113,6 +113,9 @@ class Gui(QMainWindow):
 
         self.ui.btnUser9.setText('Calibrate Depth')
         self.ui.btnUser9.clicked.connect(partial(nxt_if_arm_init, 'calibrate_depth'))
+
+        self.ui.btnUser10.setText('Motion Planning!!')
+        self.ui.btnUser10.clicked.connect(partial(nxt_if_arm_init, 'motion_planning'))
 
         self.ui.btnUser12.setText('Clear Waypoints')
         self.ui.btnUser12.clicked.connect(partial(nxt_if_arm_init, 'clear'))
