@@ -6,6 +6,8 @@ There are some functions to start with, you may need to implement a few more
 """
 
 import numpy as np
+import scipy as sp
+from scipy.spatial.transform import Rotation as R
 # expm is a matrix exponential function
 from scipy.linalg import expm
 
@@ -215,6 +217,7 @@ def to_s_matrix(w, v):
 
 
 # def IK_geometric(dh_params, pose):
+# def IK_geometric(x, y, z, phi, theta):
 def IK_geometric(T):
     """!
     @brief      Get all possible joint configs that produce the pose.
@@ -285,13 +288,23 @@ def IK_geometric(T):
     offset = np.arctan2(0.05, 0.2) 
 
     p_e = T[0:3, 3]
+    # p_e = np.array([x, y, z])
+    # p_e.reshape(3,1)
     R_e = T[0:3, 0:3]
     a_e = R_e[0:3, 2]
-
-    p_w = p_e - l4*a_e
-    # p_w = np.array([-0.125, 0.35, 0.152])
-    print(p_w)
+    # R_e = (R.from_euler('x', -90-phi, degrees=True)*R.from_euler('z', theta, degrees=True)).as_matrix()
+    # a_e = R_e[0:3, 2]
+    # a_e.reshape(3,1)
+    # print(np.shape(a_e))
+    # x = l4*a_e
+    # x.reshape(3,1)
+    # p_w_ = p_e - (l4*a_e).reshape(3,1)
+    # p_w = np.array([p_w_[0][0],p_w_[1][0],p_w_[2][0]])
+    # print(x.shape, p_w.shape)
+    # p_w = np.array([x-l4*a_e[0], y-l4*a_e[1], z-l4*a_e[2]])
+    # print('p:', p_w)
     # theta1 = np.arctan2(p_w[1], p_w[0]) ## + np.pi/2
+    p_w = p_e - (l4*a_e)
     theta1 = np.arctan2(-p_w[0], p_w[1])
     while (theta1 > np.pi):
         theta1 -= 2*np.pi

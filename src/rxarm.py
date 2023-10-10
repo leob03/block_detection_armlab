@@ -271,7 +271,13 @@ class RXArm(InterbotixManipulatorXS):
         return waypoints_grab
     
     def get_inverse(self, T):
-        return IK_geometric(T).tolist()
+        # return IK_geometric(x,y,z,phi,theta).tolist()
+        full_traj = IK_geometric(T).tolist()
+        # print(len(full_traj))
+        # selected_traj = [full_traj[i] for i in range(0, len(full_traj), 4)]
+        # print(len(selected_traj))
+        return full_traj
+    
 
     @_ensure_initialized
     def get_wrist_pose(self):

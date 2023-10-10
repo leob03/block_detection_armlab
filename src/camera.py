@@ -220,16 +220,7 @@ class Camera():
         w = np.matmul(np.linalg.inv(H),C)
         return w
     
-    # def retrieve_area_color(self, data, contour, labels):
-    #     mask = np.zeros(data.shape[:2], dtype="uint8")
-    #     cv2.drawContours(mask, [contour], -1, 255, -1)
-    #     mean = cv2.mean(data, mask=mask)[:3]
-    #     min_dist = (np.inf, None)
-    #     for label in labels:
-    #         d = np.linalg.norm(label["color"] - np.array(mean))
-    #         if d < min_dist[0]:
-    #             min_dist = (d, label["id"])
-    #     return min_dist[1] 
+
 
     def retrieve_area_color(self, hsv_data, contour, labels):
         mask = np.zeros(hsv_data.shape[:2], dtype="uint8")
@@ -257,54 +248,7 @@ class Camera():
                     TODO: Implement a blob detector to find blocks in the depth image
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
-        # colors = list((
-        #     # {'id': 'red', 'color': (51, 38, 135)},
-        #     # {'id': 'orange', 'color': (51, 94, 172)},
-        #     # {'id': 'yellow', 'color': (1, 182, 229)},
-        #     # {'id': 'green', 'color': (62, 79, 41)},
-        #     # {'id': 'blue', 'color': (93, 53, 0)},
-        #     # {'id': 'violet', 'color': (100, 40, 80)}
 
-        #     # {'id': 'red', 'color': (63, 53, 128)},
-        #     # {'id': 'red', 'color': (75, 61, 181)},
-        #     # {'id': 'red', 'color': (34, 21, 145)},
-        #     # {'id': 'orange', 'color': (47, 101, 193)},
-        #     # {'id': 'orange', 'color': (30, 62, 138)},
-        #     # {'id': 'yellow', 'color': (44, 155, 184)},
-        #     # {'id': 'yellow', 'color': (54, 187, 214)},
-        #     # {'id': 'yellow', 'color': (28, 198, 231)},
-        #     # {'id': 'green', 'color': (84, 123, 43)},
-        #     # {'id': 'green', 'color': (51, 82, 40)},
-        #     # {'id': 'blue', 'color': (120, 68, 2)},
-        #     # {'id': 'blue', 'color': (108, 46, 0)},
-        #     # {'id': 'blue', 'color': (138, 87, 0)},
-        #     # {'id': 'violet', 'color': (54, 29, 38)},
-        #     # {'id': 'violet', 'color': (112, 66, 51)},
-        #     # {'id': 'pink', 'color': (74, 60, 152)}
-
-        #     {'id': 'red', 'color': (52, 70, 171)},
-        #     {'id': 'red', 'color': (54, 87, 190)},
-        #     {'id': 'red', 'color': (61, 109, 213)},
-        #     {'id': 'red', 'color': (63, 114, 205)},
-        #     {'id': 'blue', 'color': (48, 240, 253)},
-        #     {'id': 'blue', 'color': (46, 234, 255)},
-        #     {'id': 'blue', 'color': (50, 239, 252)},
-        #     {'id': 'blue', 'color': (48, 243, 255)},
-        #     {'id': 'green', 'color': (43, 184, 157)},
-        #     {'id': 'green', 'color': (50, 172, 144)},
-        #     {'id': 'orange', 'color': (25, 115, 202)},
-        #     {'id': 'orange', 'color': (28, 115, 200)},
-        #     {'id': 'orange', 'color': (50, 144, 247)},
-        #     {'id': 'yellow', 'color': (31, 142, 214)},
-        #     # {'id': 'pink', 'color': ()},
-
-        #     # {'id': 'red', 'color': (0, 255, 255)},
-        #     # {'id': 'orange', 'color': (30, 255, 255)},
-        #     # {'id': 'yellow', 'color': (60, 255, 255)},
-        #     # {'id': 'green', 'color': (90, 255, 255)},
-        #     # {'id': 'blue', 'color': (120, 255, 255)},
-        #     )
-        # )
         colors = [
             {'id': 'red', 'h_range': (118, 180)},
             {'id': 'orange', 'h_range': (0, 21)},
@@ -358,7 +302,6 @@ class Camera():
         hsv_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_BGR2HSV)
         if self.block_position_record:
             self.block_detections = {}
-
 
         for contour in detected_blocks:
             rgb_image = cv2.cvtColor(self.VideoFrame.copy(), cv2.COLOR_RGB2BGR)

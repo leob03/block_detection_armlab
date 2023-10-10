@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import expm
  
 show_animation = True
+verbose = False
 D2R = np.pi/180
 
 ## todo: 1. path shortening  done
@@ -15,11 +16,13 @@ D2R = np.pi/180
 ##       4. knn?
  
 class Node(object):
+    """!
+    @brief      RRT Node
+    @param      joint_angle: 1x5 np.array in radian
+    @param      parent: int
+    @param      dis: float
     """
-    RRT Node
-    joint_angle:1x5 np.array radian
-    parent:int
-    """
+
  
     def __init__(self, _joint_angle):
         self.joint_angle = _joint_angle
@@ -28,7 +31,7 @@ class Node(object):
 
 class Obstacle(object):
     """
-    (x,y,z): center of cylinder (m)
+    (x,y,z): bottom center of cylinder (m) np.array
     r: radius (m)
     h: height (m)
     """
@@ -36,7 +39,6 @@ class Obstacle(object):
         self.pos = _pos
         self.r = _r
         self.h = _h
- 
  
 class RRT(object):
     """
@@ -55,9 +57,9 @@ class RRT(object):
         self.start = Node(joint_angle_start * D2R)
         self.end = Node(joint_angle_end * D2R)
         # self.joint_limit = _joint_limit * D2R
-        self.expandDis = 0.2
-        self.goalSampleRate = 0.2
-        self.maxIter = 500
+        self.expandDis = 0.1
+        self.goalSampleRate = 0.1
+        self.maxIter = 1000
         self.obstacleList = obstacle_list
         self.nodeList = [self.start]
         self.s_list = np.array([[0.0,     0.0,      0.0,    0.0, 0.0, 1.0],
@@ -65,10 +67,23 @@ class RRT(object):
                                 [0.0,    -0.30457,  0.05,  -1.0, 0.0, 0.0],
                                 [0.0,    -0.30457,  0.25,  -1.0, 0.0, 0.0],
                                 [-0.30457, 0.0,      0.0,    0.0, 1.0, 0.0]])
-        self.m_mat = np.array([[1.0, 0.0, 0.0, 0.0],
-                              [0.0, 1.0, 0.0, 0.42415],
-                              [0.0, 0.0, 1.0, 0.30457],
-                              [0.0, 0.0, 0.0, 1.0]])
+        self.m_mat_end = np.array([[0.0, 1.0, 0.0, 0.0],
+                                   [0.0, 0.0, 1.0, 0.42415],
+                                   [1.0, 0.0, 0.0, 0.30457],
+                                   [0.0, 0.0, 0.0, 1.0]])
+        self.m_mat_2 = np.array([[1.0, 0.0, 0.0, 0.0],
+                                 [0.0, 1.0, 0.0, 0.0],
+                                 [0.0, 0.0, 1.0, 0.10391],
+                                 [0.0, 0.0, 0.0, 1.0]])
+        self.m_mat_3 = np.array([[0.0, 1.0, 0.0, 0.0],
+                                 [0.0, 0.0, 1.0, 0.05],
+                                 [1.0, 0.0, 0.0, 0.30391],
+                                 [0.0, 0.0, 0.0, 1.0]])
+        self.m_mat_4 = np.array([[0.0, 1.0, 0.0, 0.0],
+                                 [0.0, 0.0, 1.0, 0.25],
+                                 [1.0, 0.0, 0.0, 0.30391],
+                                 [0.0, 0.0, 0.0, 1.0]])
+        
         j1_min = -180
         j1_max = 180
         j2_min = -108
@@ -90,7 +105,13 @@ class RRT(object):
             self.fig = plt.figure()
             self.ax = self.fig.add_subplot(111, projection='3d')
         # self.ax = plt.axes(projection='3d')
- 
+
+
+#########################
+## RRT helper function ##
+#########################
+
+
     def random_node(self):
         """
         :return:
@@ -139,26 +160,47 @@ class RRT(object):
                 node.parent = len(self.nodeList)-1 
                 node.dis = new_node.dis + self.joint_norm(new_node, node)
  
-    def collision_check(self, new_node):
+    def collision_check(self, new_node:Node):
         if len(self.obstacleList) == 0:
             return False # no collision
-        path_point = self.FK_pox(new_node.joint_angle, self.m_mat, self.s_list)
-        for obs in self.obstacleList:
-            pos = obs.pos
-            dz = pos[2] - path_point[2,3]
-            if abs(dz) >= obs.h/2:
-                continue
-            dis = (pos[0] - path_point[0,3])**2 + (pos[1] - path_point[1,3])**2
-            if dis <= obs.r**2:
-                return True # collision
-        return False  # no collision
+        # new_T = self.FK_pox(new_node.joint_angle, self.m_mat_end, self.s_list)
+        # if new_T[2,3] < 0:
+        #     return 
+        links = self.generate_link(new_node)
+        for link in links:
+            if link[0][2] < 0 or link[1][2] < 0 :
+                return True
+            for obs in self.obstacleList:
+                p0 = obs.pos
+                p1 = obs.pos + np.array([0,0,obs.h])
+                cyl_obs = [p0, p1, obs.r]
+                if self.check_cylinder_collision(link, cyl_obs) == False:
+                    return True
+        return False
+        
+        # path_point = self.FK_pox(new_node.joint_angle, self.m_mat, self.s_list)
+        # for obs in self.obstacleList:
+        #     pos = obs.pos
+        #     dz = pos[2] - path_point[2,3]
+        #     if abs(dz) >= obs.h/2:
+        #         continue
+        #     dis = (pos[0] - path_point[0,3])**2 + (pos[1] - path_point[1,3])**2
+        #     if dis <= obs.r**2:
+        #         return True # collision
+        # return False  # no collision
  
-    def planning(self):
+    def planning(self, joint_angle_start = None, joint_angle_end = None):
         """
-        Path planning
-        animation: flag for animation on or off
+        @brief      Path planning main function
+        @return     path: list of np.array
         """
         iter = self.maxIter
+        self.nodeList = [self.start]
+        if joint_angle_end is not None:
+            self.end = Node(joint_angle_end * D2R)
+        if joint_angle_start is not None:
+            self.start = Node(joint_angle_start * D2R)
+
         while iter:
             iter = iter - 1
             # Random Sampling
@@ -195,15 +237,15 @@ class RRT(object):
                 break
         
         if self.test:
-            path_point = self.FK_pox(self.end.joint_angle, self.m_mat, self.s_list)
+            path_point = self.FK_pox(self.end.joint_angle, self.m_mat_end, self.s_list)
             path = [path_point[:3, 3]]
             last_index = len(self.nodeList) - 1
             while self.nodeList[last_index].parent is not None:
                 node = self.nodeList[last_index]
-                path_point = self.FK_pox(node.joint_angle, self.m_mat, self.s_list)
+                path_point = self.FK_pox(node.joint_angle, self.m_mat_end, self.s_list)
                 path.append(path_point[:3, 3])
                 last_index = node.parent
-            path_point = self.FK_pox(self.start.joint_angle, self.m_mat, self.s_list)
+            path_point = self.FK_pox(self.start.joint_angle, self.m_mat_end, self.s_list)
             path.append(path_point[:3, 3])
             path = path[::-1]
             return path
@@ -217,7 +259,12 @@ class RRT(object):
         path.append(self.start.joint_angle)
         return path
     
-    
+
+##########################
+## plot helper function ##
+##########################
+
+
     # def generate_cylinder(self):
     #     for obs in self.obstacleList:
     #         z = np.linspace(obs.pos[2]-obs.h/2, obs.pos[2]+obs.h/2, 50)
@@ -274,15 +321,15 @@ class RRT(object):
         # self.generate_cylinder()
         for obs in self.obstacleList:
             r = obs.r
-            p0 = np.array([obs.pos[0],obs.pos[1],obs.pos[2]-obs.h/2])
-            p1 = np.array([obs.pos[0],obs.pos[1],obs.pos[2]+obs.h/2])
+            p0 = obs.pos
+            p1 = np.array([obs.pos[0],obs.pos[1],obs.pos[2]+obs.h])
             self.generate_cylinder(p0, p1, r)
 
         for node in self.nodeList:
             if node.parent is not None:
                 parent_node = self.nodeList[node.parent]
-                path_point = self.FK_pox(node.joint_angle, self.m_mat, self.s_list)
-                path_point_parent = self.FK_pox(parent_node.joint_angle, self.m_mat, self.s_list)
+                path_point = self.FK_pox(node.joint_angle, self.m_mat_end, self.s_list)
+                path_point_parent = self.FK_pox(parent_node.joint_angle, self.m_mat_end, self.s_list)
                 self.ax.plot([path_point[0,3], path_point_parent[0,3]], \
                              [path_point[1,3], path_point_parent[1,3]], \
                              [path_point[2,3], path_point_parent[2,3]], \
@@ -298,17 +345,20 @@ class RRT(object):
 
         # Show the plot
         plt.show()
- 
+
+
+#########################
+## arm helper function ##
+#########################
+
+
     def FK_pox(self, joint_angles, m_mat, s_lst):
         """!
         @brief      Get a  representing the pose of the desired link
 
-                    TODO: implement this function, Calculate forward kinematics for rexarm using product of exponential
-                    formulation return a 4x4 homogeneous matrix representing the pose of the desired link
-
-        @param      joint_angles  The joint angles
-                    m_mat         The M matrix
-                    s_lst         List of screw vectors
+        @param      joint_angles  The joint angles np.array in radian
+        @param      m_mat         The M matrix
+        @param      s_lst         List of screw vectors
 
         @return     a 4x4 homogeneous matrix representing the pose of the desired link
         """
@@ -327,11 +377,19 @@ class RRT(object):
                         [-Wy, Wx, 0, Vz],
                         [0, 0, 0, 0]])
 
-    def closestDistanceBetweenLines(self, a0,a1,b0,b1,r1,r2):
+    def check_cylinder_collision(self, cylinder1, cylinder2):
         ''' 
         Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
         Return the closest points on each segment and their distance
+        @param     cylinder: List[p0, p1, r]
+        @return     True: no collision
         '''
+        a0 = cylinder1[0]
+        a1 = cylinder1[1]
+        r1 = cylinder1[2]
+        b0 = cylinder2[0]
+        b1 = cylinder2[1]
+        r2 = cylinder2[2]
         clampA0=True
         clampA1=True
         clampB0=True
@@ -356,37 +414,44 @@ class RRT(object):
             # Overlap only possible with clamping
             if clampA0 or clampA1 or clampB0 or clampB1:
                 d1 = np.dot(_A,(b1-a0))
+                limit = r1+r2  ## or min(r1, r2)
+                # limit = min(r1, r2)
                 
                 # Is segment B before A?
                 if d0 <= 0 >= d1:
                     if clampA0 and clampB1:
                         if np.absolute(d0) < np.absolute(d1):
-                            print("result before:", np.linalg.norm(a0-b0))
-                            print("limit:", min(r1,r2))
-                            print(np.linalg.norm(a0-b0) > min(r1,r2))
-                            return np.linalg.norm(a0-b0) > min(r1,r2)
-                        print("result before:", np.linalg.norm(a0-b1))
-                        print("limit:", min(r1,r2))
-                        print(np.linalg.norm(a0-b1) > min(r1,r2))
-                        return np.linalg.norm(a0-b1) > min(r1,r2)
+                            if verbose:
+                                print("result before:", np.linalg.norm(a0-b0))
+                                print("limit:", limit)
+                                print(np.linalg.norm(a0-b0) > limit)
+                            return np.linalg.norm(a0-b0) > limit
+                        if verbose:
+                            print("result before:", np.linalg.norm(a0-b1))
+                            print("limit:", limit)
+                            print(np.linalg.norm(a0-b1) > limit)
+                        return np.linalg.norm(a0-b1) > limit
                     
                 # Is segment B after A?
                 elif d0 >= magA <= d1:
                     if clampA1 and clampB0:
                         if np.absolute(d0) < np.absolute(d1):
-                            print("result after:", np.linalg.norm(a1-b0))
-                            print("limit:", min(r1,r2))
-                            print(np.linalg.norm(a1-b0) > min(r1,r2))
-                            return np.linalg.norm(a1-b0) > min(r1,r2)
-                        print("result after:", np.linalg.norm(a1-b1))
-                        print("limit:", min(r1,r2))
-                        print(np.linalg.norm(a1-b1) > min(r1,r2))
-                        return np.linalg.norm(a1-b1) > min(r1,r2)
+                            if verbose:
+                                print("result after:", np.linalg.norm(a1-b0))
+                                print("limit:", limit)
+                                print(np.linalg.norm(a1-b0) > limit)
+                            return np.linalg.norm(a1-b0) > limit
+                        if verbose:
+                            print("result after:", np.linalg.norm(a1-b1))
+                            print("limit:", limit)
+                            print(np.linalg.norm(a1-b1) > limit)
+                        return np.linalg.norm(a1-b1) > limit
                                        
             # Segments overlap, return distance between parallel segments
-            print("result overlap:", np.linalg.norm(((d0*_A)+a0)-b0))
-            print("limit:", r1+r2)
-            print(np.linalg.norm(((d0*_A)+a0)-b0) > r1+r2)
+            if verbose:
+                print("result overlap:", np.linalg.norm(((d0*_A)+a0)-b0))
+                print("limit:", r1+r2)
+                print(np.linalg.norm(((d0*_A)+a0)-b0) > r1+r2)
             return np.linalg.norm(((d0*_A)+a0)-b0) > r1+r2
                  
         # Lines criss-cross: Calculate the projected closest points
@@ -430,9 +495,10 @@ class RRT(object):
         if (np.linalg.norm(pB - b1) == 0 or np.linalg.norm(pB - b0) == 0):
             r2 = r2/np.sqrt(2)
         dis = r1 + r2
-        print("result overlap:", np.linalg.norm(pA-pB))
-        print("limit: ", dis)
-        print(np.linalg.norm(pA-pB) > dis)
+        if verbose:
+            print("result overlap:", np.linalg.norm(pA-pB))
+            print("limit: ", dis)
+            print(np.linalg.norm(pA-pB) > dis)
         return np.linalg.norm(pA-pB) > dis
 
     def inverse_kinematics(self, T):
@@ -475,20 +541,61 @@ class RRT(object):
 
         return np.array([theta1, theta2, theta3, theta4, theta5])
 
+    def generate_link(self, node:Node):
+        '''
+        @return     Links: List of Link   List[List[p0, p1, r], ...]
+        
+        '''
+        t2 = self.FK_pox(node.joint_angle, self.m_mat_2, self.s_list[0:2,:])
+        link1_start = t2[0:3,3]
+        link1_end = (t2[0:3,3] + 0.22*t2[0:3,2])
+        link1 = [link1_start, link1_end, 0.03]
+
+        t3 = self.FK_pox(node.joint_angle, self.m_mat_3, self.s_list[0:3,:])
+        link2_start = t3[0:3,3] - 0.05*t3[0:3,2]
+        link2_end = t3[0:3,3] + 0.2*t3[0:3,2]
+        link2 = [link2_start, link2_end, 0.03]
+
+        t4 = self.FK_pox(node.joint_angle, self.m_mat_4, self.s_list[0:4,:])
+        link3_start = t4[0:3,3] + 0.03*t4[0:3,2]
+        link3_end = t4[0:3,3] + 0.13*t4[0:3,2]
+        link3 = [link3_start, link3_end, 0.03]
+
+        link4_start = t4[0:3,3] + 0.13*t4[0:3,2]
+        link4_end = t4[0:3,3] + 0.17415*t4[0:3,2]
+        link4 = [link4_start, link4_end, 0.06]
+        return [link1, link2, link3, link4]
+
+
  
 def main():
     print("start RRT path planning")
 
     # obstacle_list = [Obstacle((0, 0.3, 0.3), _r=0.05, _h=0.4)]
-    obstacle_list = [Obstacle((0, 0, -0.2), _r=2, _h=0.4)]
+    # obstacle_list = [Obstacle(np.array([0, 0, -0.2]), _r=2, _h=0.2),
+    #                  Obstacle(np.array([0, 0.3, 0]), _r=0.05, _h=0.4)]
+    # obstacle_list = [# Obstacle(np.array([0, 0, -0.2]), _r=2, _h=0.2),
+    #                  Obstacle(np.array([0.25, 0.075, 0]), _r=0.03, _h=0.4)]
+    obstacle_list = [Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),
+                     Obstacle(np.array([0.35, -0.075, 0]), _r=0.03, _h=0.16),]
     # obstacle_list = []
  
     # Set Initial parameters
     start = np.array([0,0,0,0,0])
     # goal = np.array([90,-60,100,90,0])
-    goal = np.array([90, 0, 0, 0, 0])
+    # goal = np.array([-1.50748957, -0.31914627,  0.70101839,  1.18892421, -1.50748957])/D2R
+    goal = np.array([1.11554625, 0.2174128 , 0.04183562, 1.3115479 , 1.11554625])/D2R
+    # goal = np.array([89, 0, 0, 0, 0])
     test = True
     rrt = RRT(start, goal, obstacle_list, test)
+
+    # ## link test
+    # node = Node(goal*D2R)
+    # links = rrt.generate_link(node)
+    # for link in links:
+    #     # print(link)
+    #     rrt.generate_cylinder(link[0], link[1], link[2])
+    # plt.show()
 
     path = rrt.planning()
     # print(path)

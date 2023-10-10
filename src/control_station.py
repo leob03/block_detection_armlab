@@ -86,6 +86,7 @@ class Gui(QMainWindow):
         self.ui.btn_torq_on.clicked.connect(lambda: self.rxarm.enable_torque())
         self.ui.btn_sleep_arm.clicked.connect(lambda: self.rxarm.sleep())
         self.ui.btn_task1.clicked.connect(partial(nxt_if_arm_init, 'task_1'))
+        self.ui.btn_task1.clicked.connect(partial(nxt_if_arm_init, 'task_2'))
 
 
         #User Buttons
