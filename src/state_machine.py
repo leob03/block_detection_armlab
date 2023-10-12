@@ -116,6 +116,11 @@ class StateMachine():
         if self.next_state == 'task_2':
             self.task_2()  
 
+        if self.next_state == 'task_3':
+            self.task_3() 
+
+        if self.next_state == 'task_4':
+            self.task_4() 
 
     """Functions run for each state"""
 
@@ -664,6 +669,393 @@ class StateMachine():
                     self.rxarm.set_positions(drop_over_position)
                     time.sleep(0.5)
         print("Mission Acomplished !! Wouhou")
+
+    def task_3(self):
+        self.status_message = "State: Perform Task 3 - Performing Task 3"
+        self.current_state = "task_3"
+        self.next_state = "idle"
+        self.camera.block_position_record = True
+        print(self.camera.block_detections)
+        time.sleep(2)
+
+        self.rxarm.initialize()
+
+        obstacle_list = []
+
+        drop_points = np.array([[-250.0, 25.0, -10.0],[250.0, 25.0, -10.0],[-250.0, 125.0, -5.0],[250.0, 125.0, -10.0],[-250.0, 225.0, -7.0],[250.0, 225.0, 0.0]],dtype=float)
+
+        start = np.array([0,0,0,0,0])
+        # goal = np.array([90,0,0,0,0])
+        colors = ['red', 'orange', 'blue', 'green', 'yellow', 'purple']
+        bl_nb = 0
+        
+        for color in colors:
+            if self.camera.block_detections.get(color) is None:
+                continue
+            else:
+                n = len(self.camera.block_detections.get(color))
+                for i in range(n):
+                    block = self.camera.block_detections[color][i]
+                    T = np.eye(4)
+                    T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T[0, 3] = block[0][0]/1000
+                    T[1, 3] = block[0][1]/1000
+                    T[2, 3] = block[0][2]/1000 + 0.12
+
+
+                    #Go to block
+                    point_over_block = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(1.5)
+
+                    #Grab it
+                    T1 = np.eye(4)
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = block[0][0]/1000
+                    T1[1, 3] = block[0][1]/1000
+                    T1[2, 3] = block[0][2]/1000
+
+                    point_block = self.rxarm.get_inverse(T1)
+
+                    rotated = point_block
+                    rotated[4] = rotated[4] - (np.pi/2 - block[1]*np.pi/180)
+                    self.rxarm.set_positions(rotated)
+                    time.sleep(2)
+
+                    self.rxarm.gripper.grasp()
+                    time.sleep(1)
+                    
+                    #Go back up
+                    self.rxarm.set_positions(point_over_block)
+                    
+                    time.sleep(2)
+
+                    #Go to Drop Position
+                    drop = drop_points[bl_nb]
+                    bl_nb+=1
+
+                    T[0, 3] = drop[0]/1000
+                    T[1, 3] = drop[1]/1000
+                    T[2, 3] = drop[2]/1000 + 0.04
+
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = drop[0]/1000
+                    T1[1, 3] = drop[1]/1000
+                    T1[2, 3] = drop[2]/1000 + 0.1
+
+                    drop_over_position = self.rxarm.get_inverse(T1)
+                    self.rxarm.set_positions(drop_over_position)
+                    time.sleep(2)
+
+                    drop_position = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(drop_position)
+                    time.sleep(2)
+                    self.rxarm.gripper.release()
+                    time.sleep(2)
+
+                    #Go back up
+
+                    self.rxarm.set_positions(drop_over_position)
+                    time.sleep(2)
+
+        print("space cleared")
+
+        self.rxarm.sleep()
+
+        time.sleep(2)
+
+        self.camera.block_position_record = True
+        print(self.camera.block_detections)
+        time.sleep(2)
+
+        self.rxarm.initialize()
+
+        drop_points_colors = np.array([[-125.0, 200.0, -5.0],[-80.0, 200.0, -5.0],[-35.0, 200.0, -5.0],[10.0, 200.0, -5.0],[55.0, 200.0, -5.0],[100.0, 200.0, -5.0]],dtype=float)
+
+        start = np.array([0,0,0,0,0])
+        # goal = np.array([90,0,0,0,0])
+        colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple']
+        bl_nb = 0
+        
+        for color in colors:
+            if self.camera.block_detections.get(color) is None:
+                continue
+            else:
+                print(self.camera.block_detections)
+                n = len(self.camera.block_detections.get(color))
+                for i in range(n):
+                    block = self.camera.block_detections[color][i]
+                    T = np.eye(4)
+
+                    T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T[0, 3] = block[0][0]/1000
+                    T[1, 3] = block[0][1]/1000
+                    T[2, 3] = block[0][2]/1000 + 0.12
+
+
+                    #Go to block
+                    point_over_block = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(1.5)
+
+                    #Grab it
+                    T1 = np.eye(4)
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = block[0][0]/1000
+                    T1[1, 3] = block[0][1]/1000
+                    T1[2, 3] = block[0][2]/1000
+
+                    point_block = self.rxarm.get_inverse(T1)
+
+                    rotated = point_block
+                    rotated[4] = rotated[4] - (np.pi/2 - block[1]*np.pi/180)
+                    self.rxarm.set_positions(rotated)
+                    time.sleep(2)
+
+                    self.rxarm.gripper.grasp()
+                    time.sleep(3)
+                    
+                    #Go back up
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(2)
+
+                    #Go to Drop Position
+                    drop_colour = drop_points_colors[bl_nb]
+                    bl_nb+=1
+
+                    T[0, 3] = drop_colour[0]/1000
+                    T[1, 3] = drop_colour[1]/1000
+                    T[2, 3] = drop_colour[2]/1000 + 0.04
+
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = drop_colour[0]/1000
+                    T1[1, 3] = drop_colour[1]/1000
+                    T1[2, 3] = drop_colour[2]/1000 + 0.1
+
+                    drop_over_position = self.rxarm.get_inverse(T1)
+
+                    rotated_drop_over = drop_over_position
+                    rotated_drop_over[4] = rotated_drop_over[4] - (np.pi/2)
+                    self.rxarm.set_positions(rotated_drop_over)
+                    time.sleep(2)
+
+                    # self.rxarm.set_positions(drop_over_position)
+                    # time.sleep(2)
+
+                    drop_position = self.rxarm.get_inverse(T)
+                    rotated_drop = drop_position
+                    rotated_drop[4] = rotated_drop[4] - (np.pi/2)
+                    self.rxarm.set_positions(rotated_drop)
+                    time.sleep(2)
+
+
+                    # self.rxarm.set_positions(drop_position)
+                    time.sleep(2)
+                    self.rxarm.gripper.release()
+                    time.sleep(2)
+
+                    #Go back up
+
+                    self.rxarm.set_positions(rotated_drop_over)
+                    time.sleep(2)
+
+    def task_4(self):
+        self.status_message = "State: Perform Task 4 - Performing Task 4"
+        self.current_state = "task_4"
+        self.next_state = "idle"
+        self.camera.block_position_record = True
+        print(self.camera.block_detections)
+        time.sleep(2)
+
+        self.rxarm.initialize()
+
+        obstacle_list = []
+
+        drop_points = np.array([[-250.0, 25.0, -10.0],[250.0, 25.0, -10.0],[-250.0, 125.0, -5.0],[250.0, 125.0, -10.0],[-250.0, 225.0, -7.0],[250.0, 225.0, 0.0]],dtype=float)
+
+        start = np.array([0,0,0,0,0])
+        # goal = np.array([90,0,0,0,0])
+        colors = ['red', 'orange', 'blue', 'green', 'yellow', 'purple']
+        bl_nb = 0
+        
+        for color in colors:
+            if self.camera.block_detections.get(color) is None:
+                continue
+            else:
+                n = len(self.camera.block_detections.get(color))
+                for i in range(n):
+                    block = self.camera.block_detections[color][i]
+                    T = np.eye(4)
+                    T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T[0, 3] = block[0][0]/1000
+                    T[1, 3] = block[0][1]/1000
+                    T[2, 3] = block[0][2]/1000 + 0.12
+
+
+                    #Go to block
+                    point_over_block = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(1.5)
+
+                    #Grab it
+                    T1 = np.eye(4)
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = block[0][0]/1000
+                    T1[1, 3] = block[0][1]/1000
+                    T1[2, 3] = block[0][2]/1000
+
+                    point_block = self.rxarm.get_inverse(T1)
+
+                    rotated = point_block
+                    rotated[4] = rotated[4] - (np.pi/2 - block[1]*np.pi/180)
+                    self.rxarm.set_positions(rotated)
+                    time.sleep(2)
+
+                    self.rxarm.gripper.grasp()
+                    time.sleep(1)
+                    
+                    #Go back up
+                    self.rxarm.set_positions(point_over_block)
+                    
+                    time.sleep(2)
+
+                    #Go to Drop Position
+                    drop = drop_points[bl_nb]
+                    bl_nb+=1
+
+                    T[0, 3] = drop[0]/1000
+                    T[1, 3] = drop[1]/1000
+                    T[2, 3] = drop[2]/1000 + 0.04
+
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = drop[0]/1000
+                    T1[1, 3] = drop[1]/1000
+                    T1[2, 3] = drop[2]/1000 + 0.1
+
+                    drop_over_position = self.rxarm.get_inverse(T1)
+                    self.rxarm.set_positions(drop_over_position)
+                    time.sleep(2)
+
+                    drop_position = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(drop_position)
+                    time.sleep(2)
+                    self.rxarm.gripper.release()
+                    time.sleep(2)
+
+                    #Go back up
+
+                    self.rxarm.set_positions(drop_over_position)
+                    time.sleep(2)
+
+        print("space cleared")
+
+        self.rxarm.sleep()
+
+        time.sleep(2)
+
+        self.camera.block_position_record = True
+        print(self.camera.block_detections)
+        time.sleep(2)
+
+        self.rxarm.initialize()
+
+        drop_points_colors = np.array([[0.0,175.9,-14.0],[0.0,175.9,10.0],[0.0,175.9,34.0],[0.0,175.9,61.0],[0.0,175.9,86.0],[0.0,175.9,111.0]],dtype=float)
+
+        start = np.array([0,0,0,0,0])
+        # goal = np.array([90,0,0,0,0])
+        colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple']
+        bl_nb = 0
+        
+        for color in colors:
+            if self.camera.block_detections.get(color) is None:
+                continue
+            else:
+                print(self.camera.block_detections)
+                n = len(self.camera.block_detections.get(color))
+                for i in range(n):
+                    block = self.camera.block_detections[color][i]
+                    T = np.eye(4)
+
+                    T[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T[0, 3] = block[0][0]/1000
+                    T[1, 3] = block[0][1]/1000
+                    T[2, 3] = block[0][2]/1000 + 0.12
+
+
+                    #Go to block
+                    point_over_block = self.rxarm.get_inverse(T)
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(1.5)
+
+                    #Grab it
+                    T1 = np.eye(4)
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = block[0][0]/1000
+                    T1[1, 3] = block[0][1]/1000
+                    T1[2, 3] = block[0][2]/1000 + 0.007
+
+                    point_block = self.rxarm.get_inverse(T1)
+                    rotated = point_block
+                    rotated[4] = rotated[4] - (np.pi/2 - block[1]*np.pi/180)
+                    self.rxarm.set_positions(rotated)
+                    time.sleep(2)
+
+                    self.rxarm.gripper.grasp()
+                    time.sleep(1)
+                    self.rxarm.gripper.release()
+                    time.sleep(1)
+
+                    rotated2 = rotated
+                    rotated2[4] = rotated2[4] - (np.pi/2)
+                    self.rxarm.set_positions(rotated2)
+                    time.sleep(2)
+
+                    self.rxarm.gripper.grasp()
+                    time.sleep(3)
+                    
+                    #Go back up
+                    self.rxarm.set_positions(point_over_block)
+                    time.sleep(2)
+
+                    #Go to Drop Position
+                    drop_colour = drop_points_colors[bl_nb]
+                    bl_nb+=1
+
+                    T[0, 3] = drop_colour[0]/1000
+                    T[1, 3] = drop_colour[1]/1000
+                    T[2, 3] = drop_colour[2]/1000 + 0.04
+
+                    T1[:3, :3]  = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+                    T1[0, 3] = drop_colour[0]/1000
+                    T1[1, 3] = drop_colour[1]/1000
+                    T1[2, 3] = drop_colour[2]/1000 + 0.1
+
+                    drop_over_position = self.rxarm.get_inverse(T1)
+
+                    rotated_drop_over = drop_over_position
+                    rotated_drop_over[4] = rotated_drop_over[4] - (np.pi/2)
+                    self.rxarm.set_positions(rotated_drop_over)
+                    time.sleep(2)
+
+                    # self.rxarm.set_positions(drop_over_position)
+                    # time.sleep(2)
+
+                    drop_position = self.rxarm.get_inverse(T)
+                    rotated_drop = drop_position
+                    rotated_drop[4] = rotated_drop[4] - (np.pi/2)
+                    self.rxarm.set_positions(rotated_drop)
+                    time.sleep(2)
+
+
+                    # self.rxarm.set_positions(drop_position)
+                    time.sleep(2)
+                    self.rxarm.gripper.release()
+                    time.sleep(2)
+
+                    #Go back up
+
+                    self.rxarm.set_positions(rotated_drop_over)
+                    time.sleep(2)
 
     def motion_planning(self):
         obstacle_list = [motion_planner.Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),

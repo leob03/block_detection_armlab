@@ -87,6 +87,8 @@ class Gui(QMainWindow):
         self.ui.btn_sleep_arm.clicked.connect(lambda: self.rxarm.sleep())
         self.ui.btn_task1.clicked.connect(partial(nxt_if_arm_init, 'task_1'))
         self.ui.btn_task2.clicked.connect(partial(nxt_if_arm_init, 'task_2'))
+        self.ui.btn_task3.clicked.connect(partial(nxt_if_arm_init, 'task_3'))
+        self.ui.btn_task4.clicked.connect(partial(nxt_if_arm_init, 'task_4'))
 
 
         #User Buttons

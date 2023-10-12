@@ -330,9 +330,9 @@ def IK_geometric(T):
     theta4 = np.pi/2 - theta2 - theta3
 
     max_wrist_len = 405.73/1000
-    if np.sqrt((p_wz - 103.91/1000)**2 + p_wx**2 + p_wy**2) > max_wrist_len:
-        print("\n----------------Location outside of boundaries.------------------\n")
-        return np.array([])
+    # if np.sqrt((p_wz - 103.91/1000)**2 + p_wx**2 + p_wy**2) > max_wrist_len:
+    #     print("\n----------------Location outside of boundaries.------------------\n")
+    #     return np.array([])
 
 
     # # Wrist Perpendicular
