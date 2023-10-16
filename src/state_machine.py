@@ -1061,7 +1061,9 @@ class StateMachine():
     def motion_planning(self):
         obstacle_list = [motion_planner.Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),
                      motion_planner.Obstacle(np.array([-0.075, 0.35, 0]), _r=0.03, _h=0.16),
-                     motion_planner.Obstacle(np.array([0.25, 0.075, 0]), _r=0.035, _h=0.24), ]
+                     motion_planner.Obstacle(np.array([0.25, 0.075, 0]), _r=0.035, _h=0.24), 
+                     motion_planner.Obstacle(np.array([0.35, 0.075, 0]), _r=0.035, _h=0.28),
+                     motion_planner.Obstacle(np.array([0.1, 0.225, 0]), _r=0.035, _h=0.5), ]
         
         # start = np.array([0,0,0,0,0])
         # goal = np.array([90,-60,100,90,0])
@@ -1092,7 +1094,8 @@ class StateMachine():
         for i in range(0,len(path)):
             print(path[i]/D2R)
             self.rxarm.set_positions(path[i].tolist())
-            time.sleep(2)
+            time.sleep(0.6)
+            # time.sleep(self.rxarm.moving_time)
         
         self.next_state = "idle"
 
