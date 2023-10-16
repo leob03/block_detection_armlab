@@ -9,6 +9,7 @@ from tkinter import *
 import tkinter.messagebox
 import cv2
 import rrt as motion_planner
+from kinematics import IK_geometric
 
 D2R = np.pi/180
 
@@ -1059,20 +1060,40 @@ class StateMachine():
 
     def motion_planning(self):
         obstacle_list = [motion_planner.Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),
-                         motion_planner.Obstacle(np.array([ -0.075,0.35, 0]), _r=0.03, _h=0.16),]
+                     motion_planner.Obstacle(np.array([-0.075, 0.35, 0]), _r=0.03, _h=0.16),
+                     motion_planner.Obstacle(np.array([0.25, 0.075, 0]), _r=0.035, _h=0.24), ]
         
-        start = np.array([0,0,0,0,0])
+        # start = np.array([0,0,0,0,0])
         # goal = np.array([90,-60,100,90,0])
         # goal = np.array([-1.50748957, -0.31914627,  0.70101839,  1.18892421, -1.50748957])/D2R
-        goal = np.array([1.11554625, 0.2174128 , 0.04183562, 1.3115479 , 1.11554625])/D2R
+        # goal = np.array([1.11554625, 0.2174128 , 0.04183562, 1.3115479 , 1.11554625])/D2R
         # goal = np.array([89, 0, 0, 0, 0])
+
         test = False
+        T = np.eye(4)
+        T[:3, :3] = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        T[0, 3] = 0.25
+        T[1, 3] = -0.025
+        T[2, 3] = 0.05
+        goal = IK_geometric(T)/D2R
+        # T[0, 3] = -0.2
+        # T[1, 3] = 0.1
+        # T[2, 3] = 0.05
+        # start = IK_geometric(T)/D2R
+        start = np.array([0,0,0,0,0])
+
+        self.rxarm.set_positions(start.tolist())
+        time.sleep(2)
+
         rrt = motion_planner.RRT(start, goal, obstacle_list, test)
         path = rrt.planning()
-        print(path)
-        for i in range(len(path)-1,-1,-5):
+        
+        # for i in range(len(path)-1,-1,-5):
+        for i in range(0,len(path)):
+            print(path[i]/D2R)
             self.rxarm.set_positions(path[i].tolist())
-            time.sleep(0.5)
+            time.sleep(2)
+        
         self.next_state = "idle"
 
 

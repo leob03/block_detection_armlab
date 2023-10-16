@@ -60,7 +60,7 @@ class RRT(object):
         self.start = Node(joint_angle_start * D2R)
         self.end = Node(joint_angle_end * D2R)
         # self.joint_limit = _joint_limit * D2R
-        self.expandDis = 0.5
+        self.expandDis = 0.2
         self.goalSampleRate = 0.1
         self.maxIter = 1000
         self.obstacleList = obstacle_list
@@ -259,18 +259,21 @@ class RRT(object):
                 new_node_b.dis = nearest_node_b.dis + self.expandDis
 
                 if self.collision_check(new_node_b):
-                    self.draw_process(new_node)
+                    if (self.test):
+                        self.draw_process(new_node)
                     continue
 
                 self.nodeList_b.append(new_node_b)
-                self.draw_process(new_node, new_node_b)
+                if (self.test):
+                    self.draw_process(new_node, new_node_b)
             else:
                 # check goal
                 distance = self.joint_norm(new_node, self.end)
                 if distance <= self.expandDis:
                     print("Goal!!")
                     break
-                self.draw_process(new_node)
+                if (self.test):
+                    self.draw_process(new_node)
 
         if self.enable_bid:
             return self.generate_path_bid(self.nodeList, self.nodeList_b, self.test)
