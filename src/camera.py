@@ -59,6 +59,7 @@ class Camera():
         self.block_detections = {}
         self.w = None
         self.block_position_record = False
+        self.detected_positions = []
 
         # rows, cols = 720, 1280
 
@@ -337,19 +338,27 @@ class Camera():
             cx = int(M['m10']/(M['m00']+1e-12))
             cy = int(M['m01']/(M['m00']+1e-12))
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
-            # cv2.putText(image, str(int(area)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
+        
+            # pos = self.uv2xyz_single(cx, cy)
+            # cv2.putText(image, str(int(pos[0])), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
+            # cv2.putText(image, str(int(pos[1])), (cx+90, cy-40), font, 1.0, (0,0,0), thickness=2)
+            # cv2.putText(image, str(int(cx)), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
+            # cv2.putText(image, str(int(cy)), (cx+90, cy-40), font, 1.0, (0,0,0), thickness=2)
+
             # cv2.putText(image, str(int(theta)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
-            if h is not None:
-                cv2.putText(image, str(int(h)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
+            # if h is not None:
+            #     cv2.putText(image, str(int(h)), (cx, cy), font, 0.5, (255,255,255), thickness=2)
             # print(color, int(theta), cx, cy)
 
             # Add blocks to the dictionary
             if self.block_position_record:
                 pos = self.uv2xyz_single(cx, cy)
+                self.detected_positions.append(pos[0:1])
                 if self.block_detections.get(color) is not None:
                     self.block_detections[color].append([pos,theta,area])
                 else:
                     self.block_detections[color] = [[pos,theta,area]]
+
         
         self.block_position_record = False
         # print(self.block_detections)

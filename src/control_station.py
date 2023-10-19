@@ -89,6 +89,7 @@ class Gui(QMainWindow):
         self.ui.btn_task2.clicked.connect(partial(nxt_if_arm_init, 'task_2'))
         self.ui.btn_task3.clicked.connect(partial(nxt_if_arm_init, 'task_3'))
         self.ui.btn_task4.clicked.connect(partial(nxt_if_arm_init, 'task_4'))
+        self.ui.btn_task5.clicked.connect(partial(nxt_if_arm_init, 'task_5'))
 
 
         #User Buttons

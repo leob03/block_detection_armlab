@@ -10,6 +10,7 @@ import tkinter.messagebox
 import cv2
 import rrt as motion_planner
 from kinematics import IK_geometric
+import matplotlib.pyplot as plt
 
 D2R = np.pi/180
 
@@ -123,6 +124,9 @@ class StateMachine():
         if self.next_state == 'task_4':
             self.task_4() 
 
+        if self.next_state == 'task_5':
+            self.task_5() 
+
     """Functions run for each state"""
 
     def manual(self):
@@ -214,7 +218,7 @@ class StateMachine():
         extrinsic_mat[:3,:3] = rot_mat
         extrinsic_mat[:3,3] = trans_vec.flatten()
         self.camera.extrinsic_matrix = extrinsic_mat
-        # print(extrinsic_mat)
+        print(extrinsic_mat)
         self.status_message = "Calibration - Completed Calibration"
 
         corner_world = np.array([[-500.0,-175.0,0,1],[500.0,-175.0,0,1],[500.0,475.0,0,1],[-500.0,475.0,0,1]], dtype=float).T
@@ -227,9 +231,10 @@ class StateMachine():
         # src_pts = image_points[:4,].reshape(4,2)
         # dest_pts = np.array([[180.0,540.0],[1040.0,540.0],[1040.0,180.0],[180.0,240.0]])
         src_pts = corner_pixel[:3,].T
-        print(src_pts)
+        # print(src_pts)
         dest_pts = np.array([[140.0,685.0],[1140.0,685.0],[1140.0,35.0],[140.0,35.0]], dtype=float)
         self.camera.Homography = cv2.findHomography(src_pts, dest_pts)[0]
+        print(self.camera.Homography)
 
 
     def grab(self):
@@ -1057,6 +1062,56 @@ class StateMachine():
 
                     self.rxarm.set_positions(rotated_drop_over)
                     time.sleep(2)
+
+    def task_5(self):
+        self.status_message = "State: Perform Task 5 - Performing Task 5"
+        self.current_state = "task_5"
+        self.next_state = "idle"
+        self.camera.block_position_record = True
+        print(self.camera.block_detections)
+        time.sleep(2)
+        print(self.camera.block_detections)
+        ground_truth = np.array([[-250, -25], [250, -25], [250, 275], [-250, 275]])
+        detected_positions = np.array(self.camera.detected_positions)
+
+        differences = detected_positions - ground_truth
+
+        # Calculate the Euclidean distance (error) for each detected block
+        errors = np.linalg.norm(differences, axis=1)
+
+        # Define the grid parameters
+        x_min, x_max = -500, 500
+        y_min, y_max = -175, 475
+        grid_resolution = 101  # Adjust the resolution as needed
+
+        # Create a grid of X and Y positions
+        x_grid = np.linspace(x_min, x_max, grid_resolution)
+        y_grid = np.linspace(y_min, y_max, grid_resolution)
+
+        # Create an empty heatmap to store error values
+        heatmap_data = np.zeros((grid_resolution - 1, grid_resolution - 1))
+
+        # Iterate through the grid cells
+        for i in range(grid_resolution - 1):
+            for j in range(grid_resolution - 1):
+                x_cell = (x_grid[i] + x_grid[i + 1]) / 2
+                y_cell = (y_grid[j] + y_grid[j + 1]) / 2
+
+                # Calculate the average error within the cell
+                cell_errors = np.linalg.norm(ground_truth - [x_cell, y_cell], axis=1)
+                average_error = np.mean(cell_errors)
+
+                # Store the average error in the heatmap
+                heatmap_data[i, j] = average_error
+
+        # Create a heatmap plot
+        plt.imshow(heatmap_data, extent=[x_min, x_max, y_min, y_max], origin='lower', cmap='viridis')
+        plt.colorbar()
+        plt.title('Uncertainty Heatmap')
+        plt.xlabel('X Position (mm)')
+        plt.ylabel('Y Position (mm)')
+        plt.show()
+
 
     def motion_planning(self):
         obstacle_list = [motion_planner.Obstacle(np.array([0.075, -0.05, 0]), _r=0.03, _h=0.16),
