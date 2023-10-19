@@ -338,7 +338,9 @@ class Camera():
             cx = int(M['m10']/(M['m00']+1e-12))
             cy = int(M['m01']/(M['m00']+1e-12))
             cv2.putText(image, color, (cx-30, cy+40), font, 1.0, (0,0,0), thickness=2)
-        
+            pos = self.uv2xyz_single(cx, cy)
+            cv2.putText(image, str(int(pos[0])), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
+            cv2.putText(image, str(int(pos[1])), (cx-30, cy-40), font, 1.0, (0,0,0), thickness=2)
             # pos = self.uv2xyz_single(cx, cy)
             # cv2.putText(image, str(int(pos[0])), (cx+30, cy-40), font, 1.0, (0,0,0), thickness=2)
             # cv2.putText(image, str(int(pos[1])), (cx+90, cy-40), font, 1.0, (0,0,0), thickness=2)
@@ -353,6 +355,7 @@ class Camera():
             # Add blocks to the dictionary
             if self.block_position_record:
                 pos = self.uv2xyz_single(cx, cy)
+
                 self.detected_positions.append(pos[0:1])
                 if self.block_detections.get(color) is not None:
                     self.block_detections[color].append([pos,theta,area])
