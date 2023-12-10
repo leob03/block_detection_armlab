@@ -1,4 +1,14 @@
-# armlab-f23
+# Block Detection & Arm Path-Planning
+
+Making an arm robot autonomous, using computer vision techniques, kinematics and path-planning to enable the robot to manipulate various objects.
+
+<p align="center">
+<img src=./media/block_detec.png width=40% height=40%>
+</p>
+
+<p align="center">
+<img src=./media/filtering.png width=40% height=40%>
+</p>
 
 **Table of content**
 - [Code structure](#code-structure)
